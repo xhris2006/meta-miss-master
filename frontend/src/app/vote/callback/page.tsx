@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -7,7 +7,7 @@ import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
-export default function VoteCallbackPage() {
+function VoteCallbackContent() {
   const params = useSearchParams();
   const [status, setStatus] = useState<"loading" | "success" | "failed">("loading");
   const [votes, setVotes] = useState<number>(0);
@@ -70,5 +70,20 @@ export default function VoteCallbackPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function VoteCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="glass rounded-2xl p-10 max-w-md w-full text-center">
+          <Loader2 className="w-14 h-14 text-gold-400 mx-auto mb-4 animate-spin" />
+          <h2 className="font-display text-2xl text-white mb-2">Chargement...</h2>
+        </div>
+      </div>
+    }>
+      <VoteCallbackContent />
+    </Suspense>
   );
 }
