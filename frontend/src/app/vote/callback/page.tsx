@@ -1,19 +1,24 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
-export default function VoteCallbackPage() {
-  const params = useSearchParams();
+type VoteCallbackPageProps = {
+  searchParams: {
+    tx_ref?: string | string[];
+    status?: string | string[];
+  };
+};
+
+export default function VoteCallbackPage({ searchParams }: VoteCallbackPageProps) {
   const [status, setStatus] = useState<"loading" | "success" | "failed">("loading");
   const [votes, setVotes] = useState<number>(0);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const txRef = params.get("tx_ref");
-    const flwStatus = params.get("status");
+    const txRef = Array.isArray(searchParams.tx_ref) ? searchParams.tx_ref[0] : searchParams.tx_ref;
+    const flwStatus = Array.isArray(searchParams.status) ? searchParams.status[0] : searchParams.status;
 
     if (!txRef) { setStatus("failed"); setMessage("Référence introuvable"); return; }
     if (flwStatus === "cancelled") { setStatus("failed"); setMessage("Paiement annulé"); return; }
@@ -32,7 +37,7 @@ export default function VoteCallbackPage() {
       setStatus("failed");
       setMessage("Erreur lors de la vérification");
     });
-  }, []);
+  }, [searchParams.status, searchParams.tx_ref]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
