@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mmm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mmm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mmm_password}
+      POSTGRES_DB: ${POSTGRES_DB:-metamissmaster}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mmm_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mmm_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mmm_user}:${POSTGRES_PASSWORD:-mmm_password}@postgres:5432/${POSTGRES_DB:-metamissmaster}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      FLW_PUBLIC_KEY: ${FLW_PUBLIC_KEY}
+      FLW_SECRET_KEY: ${FLW_SECRET_KEY}
+      FLW_SECRET_HASH: ${FLW_SECRET_HASH}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "5000:5000"
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:5000}
+        NEXT_PUBLIC_FLW_PUBLIC_KEY: ${NEXT_PUBLIC_FLW_PUBLIC_KEY}
+    container_name: mmm_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:5000}
+      NEXT_PUBLIC_FLW_PUBLIC_KEY: ${NEXT_PUBLIC_FLW_PUBLIC_KEY}
+
+volumes:
+  postgres_data:
+  uploads_data:
+  logs_data:
