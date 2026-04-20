@@ -5,6 +5,8 @@ import Link from "next/link";
 import api from "@/lib/api";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default function VoteCallbackPage() {
   const params = useSearchParams();
   const [status, setStatus] = useState<"loading" | "success" | "failed">("loading");
