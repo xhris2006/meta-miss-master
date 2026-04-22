@@ -28,6 +28,8 @@ body {
   color: var(--text);
   overflow-x: hidden;
   line-height: 1.6;
+  min-height: 100vh;
+  padding-bottom: 120px;
 }
 body::before {
   content: '';

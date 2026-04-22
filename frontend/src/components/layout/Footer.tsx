@@ -4,54 +4,63 @@ export default function Footer() {
   return (
     <footer
       style={{
-        position: "relative",
-        zIndex: 1,
+        position: "fixed",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 90,
         borderTop: "1px solid rgba(201,147,42,.15)",
-        padding: "24px 12px",
+        padding: "12px 16px",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: 12,
-        background: "rgba(10,0,5,0.6)",
+        justifyContent: "center",
+        gap: 8,
+        background: "rgba(10,0,5,0.9)",
+        backdropFilter: "blur(16px)",
         fontSize: "0.75rem",
+        textAlign: "center",
       }}
     >
       <div
         style={{
           fontFamily: "var(--font-display)",
-          fontSize: "0.8rem",
+          fontSize: "0.9rem",
           color: "var(--gold-light)",
           fontWeight: 700,
           letterSpacing: "0.08em",
+          textTransform: "uppercase",
         }}
       >
-        MISS & MASTER
+        Meta Miss & Master
       </div>
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center", flex: 1 }}>
+
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
         {[
+          ["Accueil", "/"],
           ["Candidats", "/candidates"],
           ["Classement", "/ranking"],
           ["Participer", "/candidates/register"],
-        ].map(([l, h]) => (
+          ["Support", "/support"],
+        ].map(([label, href]) => (
           <Link
-            key={h}
-            href={h}
+            key={href}
+            href={href}
             style={{
               color: "var(--text-muted)",
               textDecoration: "none",
-              fontSize: "0.7rem",
+              fontSize: "0.72rem",
               letterSpacing: "0.05em",
-              transition: "color .2s",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--gold-light)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
           >
-            {l}
+            {label}
           </Link>
         ))}
       </div>
-      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>© {new Date().getFullYear()}</div>
+
+      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+        Copyright {new Date().getFullYear()} - Tous droits reserves
+      </div>
     </footer>
   );
 }
