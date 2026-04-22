@@ -41,8 +41,8 @@ export default function Navbar() {
           top: 0,
           width: "100%",
           zIndex: 100,
-          padding: "0 18px",
-          height: "68px",
+          padding: "0 14px",
+          height: "56px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -55,21 +55,22 @@ export default function Navbar() {
           href="/"
           style={{
             fontFamily: "var(--font-display)",
-            fontSize: "1.08rem",
+            fontSize: "0.9rem",
             fontWeight: 600,
             letterSpacing: "0.08em",
             color: "var(--gold-light)",
             display: "flex",
             alignItems: "center",
-            gap: 10,
+            gap: 8,
             textDecoration: "none",
           }}
         >
-          <span style={{ fontSize: "1.15rem" }}>M</span>
-          META MISS & MASTER
+          <span style={{ fontSize: "1rem" }}>M</span>
+          <span style={{ display: "none" }} className="hidden sm:inline">META MISS & MASTER</span>
+          <span style={{ display: "inline" }} className="sm:hidden">MM</span>
         </Link>
 
-        <div style={{ display: "flex", gap: 28, alignItems: "center" }} className="hidden md:flex">
+        <div style={{ display: "flex", gap: 20, alignItems: "center" }} className="hidden md:flex">
           {publicLinks.map(([label, href]) => (
             <Link
               key={href}
@@ -77,7 +78,7 @@ export default function Navbar() {
               style={{
                 color: "var(--text-muted)",
                 textDecoration: "none",
-                fontSize: "0.82rem",
+                fontSize: "0.7rem",
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
                 transition: "color .2s",
@@ -90,14 +91,14 @@ export default function Navbar() {
           ))}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }} className="hidden md:flex">
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }} className="hidden md:flex">
           {isAuthenticated && user?.role === "ADMIN" ? (
             <>
               <Link
                 href="/admin"
                 style={{
                   color: "var(--gold)",
-                  fontSize: "0.82rem",
+                  fontSize: "0.7rem",
                   textDecoration: "none",
                   letterSpacing: "0.06em",
                   textTransform: "uppercase",
@@ -146,23 +147,23 @@ export default function Navbar() {
           className="md:hidden"
           aria-label="Ouvrir le menu"
           style={{
-            minWidth: 88,
-            height: 42,
-            borderRadius: 14,
+            minWidth: 42,
+            height: 36,
+            borderRadius: 10,
             border: "1px solid rgba(201,147,42,.22)",
             background: "rgba(201,147,42,.08)",
             color: "var(--text)",
-            fontSize: "0.92rem",
+            fontSize: "0.8rem",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 8,
+            gap: 6,
             fontWeight: 600,
           }}
         >
-          <span style={{ fontSize: "1.15rem", lineHeight: 1 }}>☰</span>
-          <span>Menu</span>
+          <span style={{ fontSize: "1rem", lineHeight: 1 }}>☰</span>
+          <span className="hidden">Menu</span>
         </button>
       </nav>
 
@@ -185,33 +186,33 @@ export default function Navbar() {
               position: "fixed",
               top: 0,
               right: 0,
-              width: "min(320px, 86vw)",
+              width: "min(280px, 90vw)",
               height: "100vh",
               zIndex: 110,
               background: "linear-gradient(180deg, rgba(18,4,10,.98), rgba(8,0,3,.98))",
               borderLeft: "1px solid rgba(201,147,42,.18)",
               boxShadow: "-20px 0 60px rgba(0,0,0,.4)",
-              padding: "22px 18px 28px",
+              padding: "16px 14px 20px",
               display: "flex",
               flexDirection: "column",
-              gap: 18,
+              gap: 12,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ color: "var(--gold-light)", fontFamily: "var(--font-display)", letterSpacing: "0.08em" }}>
+              <div style={{ color: "var(--gold-light)", fontFamily: "var(--font-display)", letterSpacing: "0.08em", fontSize: "0.9rem" }}>
                 Menu
               </div>
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Fermer le menu"
                 style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 14,
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
                   border: "1px solid var(--border)",
                   background: "transparent",
                   color: "var(--text)",
-                  fontSize: "1.1rem",
+                  fontSize: "1rem",
                   cursor: "pointer",
                 }}
               >
@@ -221,32 +222,32 @@ export default function Navbar() {
 
             <div
               style={{
-                padding: "16px 14px",
-                borderRadius: 18,
+                padding: "12px 12px",
+                borderRadius: 14,
                 background: "rgba(201,147,42,.06)",
                 border: "1px solid rgba(201,147,42,.12)",
                 color: "var(--text-muted)",
-                fontSize: "0.82rem",
-                lineHeight: 1.6,
+                fontSize: "0.75rem",
+                lineHeight: 1.5,
               }}
             >
-              Votez librement. 1 vote = 100 FCFA.
+              1 vote = 100 FCFA
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {publicLinks.map(([label, href]) => (
                 <Link
                   key={href}
                   href={href}
                   onClick={() => setOpen(false)}
                   style={{
-                    padding: "14px 16px",
-                    borderRadius: 16,
+                    padding: "11px 14px",
+                    borderRadius: 12,
                     color: "var(--text)",
                     textDecoration: "none",
                     background: "rgba(255,255,255,.03)",
                     border: "1px solid var(--border)",
-                    fontSize: "0.92rem",
+                    fontSize: "0.82rem",
                   }}
                 >
                   {label}
@@ -254,18 +255,19 @@ export default function Navbar() {
               ))}
             </div>
 
-            <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
               <Link
                 href="/vote"
                 onClick={() => setOpen(false)}
                 style={{
-                  padding: "14px 16px",
-                  borderRadius: 16,
+                  padding: "11px 14px",
+                  borderRadius: 12,
                   textDecoration: "none",
                   textAlign: "center",
                   background: "linear-gradient(135deg,var(--gold),var(--gold-light))",
                   color: "#08000A",
                   fontWeight: 600,
+                  fontSize: "0.85rem",
                 }}
               >
                 Voter maintenant
@@ -277,29 +279,30 @@ export default function Navbar() {
                     href="/admin"
                     onClick={() => setOpen(false)}
                     style={{
-                      padding: "14px 16px",
-                      borderRadius: 16,
+                      padding: "11px 14px",
+                      borderRadius: 12,
                       textDecoration: "none",
                       color: "var(--gold-light)",
                       border: "1px solid rgba(201,147,42,.24)",
                       textAlign: "center",
+                      fontSize: "0.82rem",
                     }}
                   >
-                    Ouvrir l admin
+                    Admin
                   </Link>
                   <button
                     onClick={handleLogout}
                     style={{
-                      padding: "14px 16px",
-                      borderRadius: 16,
+                      padding: "11px 14px",
+                      borderRadius: 12,
                       border: "1px solid rgba(239,83,80,.25)",
                       background: "transparent",
                       color: "#EF5350",
                       cursor: "pointer",
-                      fontSize: "0.9rem",
+                      fontSize: "0.82rem",
                     }}
                   >
-                    Deconnexion
+                    Déconnecter
                   </button>
                 </>
               ) : (
@@ -307,15 +310,16 @@ export default function Navbar() {
                   href="/xhrisadmin"
                   onClick={() => setOpen(false)}
                   style={{
-                    padding: "14px 16px",
-                    borderRadius: 16,
+                    padding: "11px 14px",
+                    borderRadius: 12,
                     textDecoration: "none",
                     color: "var(--text-muted)",
                     border: "1px solid var(--border)",
                     textAlign: "center",
+                    fontSize: "0.82rem",
                   }}
                 >
-                  Acces admin
+                  Admin
                 </Link>
               )}
             </div>

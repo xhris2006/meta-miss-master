@@ -23,16 +23,16 @@ export default function CandidatesPage() {
   return (
     <div className="min-h-screen">
       <Navbar />
-      <main style={{ padding: "100px 16px 72px", maxWidth: 1200, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
+      <main style={{ padding: "70px 12px 50px", maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div className="section-tag">Vote public</div>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.4rem,6vw,4rem)", marginBottom: 12 }}>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.8rem,5vw,3.2rem)", marginBottom: 10 }}>
             Tous les candidats
           </h1>
-          <p style={{ color: "var(--text-muted)", maxWidth: 640, margin: "0 auto 20px", lineHeight: 1.8 }}>
+          <p style={{ color: "var(--text-muted)", maxWidth: 640, margin: "0 auto 16px", lineHeight: 1.6, fontSize: "0.9rem" }}>
             Choisissez votre favori puis votez librement. Chaque vote vaut 100 FCFA.
           </p>
-          <Link href="/candidates/register" className="btn-primary">
+          <Link href="/candidates/register" className="btn-primary" style={{ fontSize: "0.85rem", padding: "8px 20px" }}>
             Participer au concours
           </Link>
         </div>
@@ -41,7 +41,7 @@ export default function CandidatesPage() {
         {!loading && error && <div style={{ textAlign: "center", color: "#EF5350" }}>{error}</div>}
 
         {!loading && !error && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 14 }}>
             {candidates.map((candidate, index) => (
               <CandidateCard key={candidate.id} candidate={candidate} index={index} />
             ))}

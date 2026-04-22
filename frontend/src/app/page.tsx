@@ -30,44 +30,44 @@ export default function HomePage() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      padding: "110px 18px 60px",
+      padding: "70px 14px 40px",
       textAlign: "center",
     },
     eyebrow: {
       display: "inline-flex",
       alignItems: "center",
-      gap: 10,
-      fontSize: "0.72rem",
-      letterSpacing: "0.22em",
+      gap: 8,
+      fontSize: "0.65rem",
+      letterSpacing: "0.2em",
       textTransform: "uppercase",
       color: "var(--gold)",
       border: "1px solid rgba(201,147,42,.3)",
-      padding: "6px 18px",
+      padding: "5px 14px",
       borderRadius: 100,
-      marginBottom: 28,
+      marginBottom: 18,
       animation: "fade-up .8s ease both",
     },
-    eyebrowDot: { width: 5, height: 5, borderRadius: "50%", background: "var(--gold)", display: "inline-block" },
+    eyebrowDot: { width: 4, height: 4, borderRadius: "50%", background: "var(--gold)", display: "inline-block" },
     title: {
       fontFamily: "var(--font-display)",
-      fontSize: "clamp(2.8rem,11vw,8rem)",
+      fontSize: "clamp(2.2rem,10vw,6rem)",
       fontWeight: 300,
-      lineHeight: 0.92,
+      lineHeight: 0.95,
       letterSpacing: "-0.02em",
-      marginBottom: 22,
+      marginBottom: 14,
       animation: "fade-up .8s .1s ease both",
     },
     sub: {
-      fontSize: "0.98rem",
+      fontSize: "0.88rem",
       color: "var(--text-muted)",
       maxWidth: 620,
-      margin: "0 auto 36px",
-      lineHeight: 1.8,
+      margin: "0 auto 24px",
+      lineHeight: 1.6,
       animation: "fade-up .8s .2s ease both",
     },
     actions: {
       display: "flex",
-      gap: 14,
+      gap: 10,
       justifyContent: "center",
       flexWrap: "wrap",
       animation: "fade-up .8s .3s ease both",
@@ -77,46 +77,46 @@ export default function HomePage() {
       zIndex: 1,
       borderTop: "1px solid var(--border)",
       borderBottom: "1px solid var(--border)",
-      padding: "18px 16px",
+      padding: "14px 12px",
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))",
-      gap: 14,
+      gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))",
+      gap: 12,
       background: "rgba(17,0,9,.6)",
       maxWidth: 900,
       margin: "0 auto",
     },
-    statVal: { fontFamily: "var(--font-display)", fontSize: "1.8rem", fontWeight: 600, color: "var(--gold-light)", lineHeight: 1 },
-    statLabel: { fontSize: "0.72rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", marginTop: 4 },
-    candSection: { padding: "84px 16px", maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 },
-    sectionTitle: { fontFamily: "var(--font-display)", fontSize: "clamp(2rem,5vw,3.4rem)", fontWeight: 300, color: "var(--text)", letterSpacing: "-0.01em" },
+    statVal: { fontFamily: "var(--font-display)", fontSize: "1.4rem", fontWeight: 600, color: "var(--gold-light)", lineHeight: 1 },
+    statLabel: { fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", marginTop: 3 },
+    candSection: { padding: "56px 12px", maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 },
+    sectionTitle: { fontFamily: "var(--font-display)", fontSize: "clamp(1.6rem,4vw,2.8rem)", fontWeight: 300, color: "var(--text)", letterSpacing: "-0.01em" },
     sectionTitleEm: { fontStyle: "italic", color: "var(--gold-light)" },
-    tabRow: { display: "flex", gap: 8, justifyContent: "center", marginBottom: 36, flexWrap: "wrap" },
-    grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 20 },
-    howSection: { padding: "72px 16px", maxWidth: 1040, margin: "0 auto", position: "relative", zIndex: 1 },
-    howGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 14 },
+    tabRow: { display: "flex", gap: 6, justifyContent: "center", marginBottom: 24, flexWrap: "wrap" },
+    grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 14 },
+    howSection: { padding: "48px 12px", maxWidth: 1040, margin: "0 auto", position: "relative", zIndex: 1 },
+    howGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12 },
     howCard: {
       background: "var(--glass)",
       border: "1px solid var(--border)",
-      borderRadius: 18,
-      padding: "22px 18px",
+      borderRadius: 14,
+      padding: "16px 14px",
       textAlign: "left",
       backdropFilter: "blur(10px)",
       transition: "border-color .2s",
     },
     howIcon: {
-      width: 46,
-      height: 46,
-      borderRadius: 14,
+      width: 40,
+      height: 40,
+      borderRadius: 10,
       background: "rgba(201,147,42,.08)",
       border: "1px solid rgba(201,147,42,.15)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontSize: "1.2rem",
-      marginBottom: 14,
+      fontSize: "1rem",
+      marginBottom: 10,
     },
-    howTitle: { fontFamily: "var(--font-display)", fontSize: "1.05rem", fontWeight: 600, color: "var(--text)", marginBottom: 8 },
-    howDesc: { fontSize: "0.82rem", color: "var(--text-muted)", lineHeight: 1.7 },
+    howTitle: { fontFamily: "var(--font-display)", fontSize: "0.95rem", fontWeight: 600, color: "var(--text)", marginBottom: 6 },
+    howDesc: { fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: 1.6 },
     orbs: { position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 },
   };
 
@@ -188,7 +188,7 @@ export default function HomePage() {
       <div className="divider" />
 
       <section style={S.candSection}>
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div className="section-tag">Les concurrentes & concurrents</div>
           <h2 style={S.sectionTitle}>
             Decouvrez les <em style={S.sectionTitleEm}>candidats</em>
@@ -206,16 +206,16 @@ export default function HomePage() {
             <CandidateCard key={candidate.id} candidate={{ ...candidate, rank: index + 1 }} index={index} />
           ))}
         </div>
-        <div style={{ textAlign: "center", marginTop: 36 }}>
+        <div style={{ textAlign: "center", marginTop: 24 }}>
           <Link
             href="/candidates"
             style={{
-              padding: "13px 32px",
+              padding: "10px 24px",
               border: "1px solid rgba(201,147,42,.4)",
               color: "var(--gold)",
               borderRadius: 100,
               textDecoration: "none",
-              fontSize: "0.9rem",
+              fontSize: "0.8rem",
               display: "inline-block",
             }}
           >
@@ -227,7 +227,7 @@ export default function HomePage() {
       <div className="divider" />
 
       <section style={S.howSection}>
-        <div style={{ textAlign: "center", marginBottom: 38 }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div className="section-tag">Simple & securise</div>
           <h2 style={S.sectionTitle}>
             Comment <em style={S.sectionTitleEm}>ca marche</em>
