@@ -6,26 +6,31 @@ const { paymentRateLimiter } = require("../middlewares/rateLimiter");
 
 const router = express.Router();
 
-// ── Webhooks (raw body, pas d'auth) ──────────────────────
-router.post("/webhook/fapshi",   express.raw({ type:"*/*" }), paymentController.webhookFapshi);
-router.post("/webhook/cinetpay", express.raw({ type:"*/*" }), paymentController.webhookCinetPay);
-router.post("/webhook/stripe",   express.raw({ type:"application/json" }), paymentController.webhookStripe);
-
-// ── Routes authentifiées ─────────────────────────────────
-router.use(authenticate);
+router.post("/webhook/fapshi", express.raw({ type: "*/*" }), paymentController.webhookFapshi);
+router.post("/webhook/cinetpay", express.raw({ type: "*/*" }), paymentController.webhookCinetPay);
+router.post("/webhook/stripe", express.raw({ type: "application/json" }), paymentController.webhookStripe);
 
 router.post(
   "/initialize",
   paymentRateLimiter,
   [
     body("candidateId").notEmpty().withMessage("Candidat requis"),
-    body("amount").isInt({ min:100 }).withMessage("Montant minimum 100 FCFA"),
-    body("provider").isIn(["fapshi","cinetpay","stripe"]).withMessage("Provider invalide"),
+    body("amount").isInt({ min: 100 }).withMessage("Montant minimum 100 FCFA"),
+    body("provider").isIn(["fapshi", "cinetpay", "stripe"]).withMessage("Provider invalide"),
+    body("voterName").trim().isLength({ min: 2, max: 100 }).withMessage("Nom requis"),
+    body("voterEmail").isEmail().normalizeEmail().withMessage("Email requis"),
+    body("voterPhone")
+      .optional()
+      .trim()
+      .isLength({ min: 6, max: 30 })
+      .withMessage("Téléphone invalide"),
   ],
-  paymentController.initialize
+  paymentController.initialize,
 );
 
 router.get("/verify/:txRef", paymentController.verify);
-router.get("/history",       paymentController.history);
+
+router.use(authenticate);
+router.get("/history", paymentController.history);
 
 module.exports = router;

@@ -6,20 +6,15 @@ const { authRateLimiter } = require("../middlewares/rateLimiter");
 
 const router = express.Router();
 
-const registerValidation = [
-  body("name").trim().isLength({ min: 2, max: 100 }).withMessage("Nom requis (2-100 caractères)"),
-  body("email").isEmail().normalizeEmail().withMessage("Email invalide"),
-  body("password").isLength({ min: 8 }).withMessage("Mot de passe minimum 8 caractères"),
-  body("phone").optional().isMobilePhone().withMessage("Numéro de téléphone invalide")
-];
-
 const loginValidation = [
-  body("email").isEmail().normalizeEmail(),
-  body("password").notEmpty()
+  body("email").isEmail().normalizeEmail().withMessage("Email admin invalide"),
+  body("password").notEmpty().withMessage("Mot de passe requis"),
+  body("propertyNumber").trim().notEmpty().withMessage("Numéro de propriété requis"),
+  body("motherFullName").trim().notEmpty().withMessage("Nom complet de la mère requis"),
 ];
 
-router.post("/register", authRateLimiter, registerValidation, authController.register);
 router.post("/login", authRateLimiter, loginValidation, authController.login);
+router.post("/admin/login", authRateLimiter, loginValidation, authController.login);
 router.post("/refresh", authRateLimiter, authController.refreshToken);
 router.get("/me", authenticate, authController.me);
 

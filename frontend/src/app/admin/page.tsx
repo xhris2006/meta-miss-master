@@ -21,7 +21,7 @@ export default function AdminPage() {
   const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== "ADMIN") { router.push("/auth/login"); return; }
+    if (!isAuthenticated || user?.role !== "ADMIN") { router.push("/xhrisadmin"); return; }
     load();
   }, [isAuthenticated]);
 

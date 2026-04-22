@@ -1,65 +1,86 @@
-const { PrismaClient } = require("@prisma/client");
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { AppError } = require("../utils/errors");
 
-const prisma = new PrismaClient();
-
-const SALT_ROUNDS = 12;
 const ACCESS_EXPIRY = "2h";
 const REFRESH_EXPIRY = "7d";
 
+function getAdminConfig() {
+  const email = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+  const password = (process.env.ADMIN_PASSWORD || "").trim();
+  const propertyNumber = (process.env.ADMIN_PROPERTY_NUMBER || "").trim();
+  const motherFullName = (process.env.ADMIN_MOTHER_FULL_NAME || "").trim().toLowerCase();
+  const displayName = (process.env.ADMIN_DISPLAY_NAME || "Administrateur").trim();
+
+  if (!email || !password || !propertyNumber || !motherFullName) {
+    throw new AppError("Variables admin manquantes sur le serveur", 500);
+  }
+
+  return { email, password, propertyNumber, motherFullName, displayName };
+}
+
 function generateTokens(payload) {
-  const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: ACCESS_EXPIRY });
-  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: REFRESH_EXPIRY });
+  const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: ACCESS_EXPIRY,
+  });
+  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: REFRESH_EXPIRY,
+  });
+
   return { accessToken, refreshToken };
 }
 
-async function register({ name, email, password, phone }) {
-  const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (existing) throw new AppError("Email déjà utilisé", 409);
+function buildAdminUser() {
+  const config = getAdminConfig();
 
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-  const user = await prisma.user.create({
-    data: { name, email: email.toLowerCase(), passwordHash, phone },
-    select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true }
-  });
+  return {
+    id: "env-admin",
+    name: config.displayName,
+    email: config.email,
+    role: "ADMIN",
+  };
+}
 
+async function loginAdmin({ email, password, propertyNumber, motherFullName }) {
+  const config = getAdminConfig();
+
+  const isValid =
+    email.toLowerCase().trim() === config.email &&
+    password === config.password &&
+    propertyNumber.trim() === config.propertyNumber &&
+    motherFullName.toLowerCase().trim() === config.motherFullName;
+
+  if (!isValid) {
+    throw new AppError("Identifiants admin invalides", 401);
+  }
+
+  const user = buildAdminUser();
   const tokens = generateTokens({ id: user.id, email: user.email, role: user.role });
+
   return { user, ...tokens };
 }
 
-async function login({ email, password }) {
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (!user) throw new AppError("Email ou mot de passe incorrect", 401);
+async function getMe(userPayload) {
+  if (!userPayload || userPayload.role !== "ADMIN" || userPayload.id !== "env-admin") {
+    throw new AppError("Utilisateur introuvable", 404);
+  }
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) throw new AppError("Email ou mot de passe incorrect", 401);
-
-  const tokens = generateTokens({ id: user.id, email: user.email, role: user.role });
-  const { passwordHash, ...safeUser } = user;
-  return { user: safeUser, ...tokens };
-}
-
-async function getMe(userId) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true }
-  });
-  if (!user) throw new AppError("Utilisateur introuvable", 404);
-  return user;
+  return buildAdminUser();
 }
 
 async function refresh(refreshToken) {
   try {
     const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const user = await prisma.user.findUnique({ where: { id: payload.id } });
-    if (!user) throw new AppError("Token invalide", 401);
-    const tokens = generateTokens({ id: user.id, email: user.email, role: user.role });
-    return tokens;
-  } catch {
+
+    if (payload.role !== "ADMIN" || payload.id !== "env-admin") {
+      throw new AppError("Token invalide", 401);
+    }
+
+    const user = buildAdminUser();
+    return generateTokens({ id: user.id, email: user.email, role: user.role });
+  } catch (error) {
+    if (error instanceof AppError) throw error;
     throw new AppError("Token invalide ou expiré", 401);
   }
 }
 
-module.exports = { register, login, getMe, refresh };
+module.exports = { loginAdmin, getMe, refresh };
