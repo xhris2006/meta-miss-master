@@ -4,20 +4,18 @@ export default function Footer() {
   return (
     <footer
       style={{
-        position: "fixed",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 90,
+        position: "relative",
+        zIndex: 20,
+        marginTop: "auto",
         borderTop: "1px solid rgba(201,147,42,.15)",
-        padding: "12px 16px",
+        padding: "16px 16px 18px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
-        background: "rgba(10,0,5,0.9)",
-        backdropFilter: "blur(16px)",
+        background: "rgba(10,0,5,0.72)",
+        backdropFilter: "blur(12px)",
         fontSize: "0.75rem",
         textAlign: "center",
       }}
@@ -35,7 +33,7 @@ export default function Footer() {
         Meta Miss & Master
       </div>
 
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center" }}>
         {[
           ["Accueil", "/"],
           ["Candidats", "/candidates"],
@@ -50,7 +48,7 @@ export default function Footer() {
               color: "var(--text-muted)",
               textDecoration: "none",
               fontSize: "0.72rem",
-              letterSpacing: "0.05em",
+              letterSpacing: "0.04em",
             }}
           >
             {label}

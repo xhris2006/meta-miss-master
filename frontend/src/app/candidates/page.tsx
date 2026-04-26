@@ -21,9 +21,9 @@ export default function CandidatesPage() {
   }, []);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main style={{ padding: "65px 10px 45px", maxWidth: 1200, margin: "0 auto" }}>
+      <main style={{ flex: 1, width: "100%", padding: "65px 10px 45px", maxWidth: 1200, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div className="section-tag">Vote public</div>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.8rem,5vw,3.2rem)", marginBottom: 10 }}>

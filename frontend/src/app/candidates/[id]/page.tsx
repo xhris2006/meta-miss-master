@@ -33,9 +33,9 @@ export default function CandidateDetailPage() {
   const photo = candidate.photoUrl?.startsWith("http") ? candidate.photoUrl : `${apiBase}${candidate.photoUrl}`;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
-      <div className="pt-16 pb-16 px-4 max-w-5xl mx-auto">
+      <div className="pt-16 pb-16 px-4 max-w-5xl mx-auto w-full flex-1">
         <Link href="/candidates" className="flex items-center gap-2 text-gray-400 hover:text-gold-400 mb-8 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Retour
         </Link>

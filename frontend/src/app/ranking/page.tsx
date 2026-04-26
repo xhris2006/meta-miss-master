@@ -75,9 +75,9 @@ export default function RankingPage() {
   };
 
   return (
-    <div style={S.page}>
+    <div style={{ ...S.page, display: "flex", flexDirection: "column" }}>
       <Navbar />
-      <div style={S.wrap}>
+      <div style={{ ...S.wrap, flex: 1, width: "100%" }}>
         <div style={S.header}>
           <div className="section-tag">Mis à jour en direct</div>
           <h1 style={S.title} className="text-gold-gradient">Classement</h1>

@@ -197,9 +197,9 @@ export default function VotePage() {
   };
 
   return (
-    <div style={S.page}>
+    <div style={{ ...S.page, display: "flex", flexDirection: "column" }}>
       <Navbar />
-      <div style={S.wrap}>
+      <div style={{ ...S.wrap, flex: 1, width: "100%" }}>
         <Link
           href={`/candidates/${candidate.id}`}
           style={{

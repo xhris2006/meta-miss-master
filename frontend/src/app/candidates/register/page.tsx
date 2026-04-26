@@ -49,9 +49,9 @@ export default function CandidateRegisterPage() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
-      <div className="pt-16 pb-16 px-4 max-w-2xl mx-auto">
+      <div className="pt-16 pb-16 px-4 max-w-2xl mx-auto w-full flex-1">
         <div className="text-center mb-10">
           <Crown className="w-10 h-10 text-gold-400 mx-auto mb-3" />
           <h1 className="font-display text-4xl text-gold-gradient mb-2">Participer au concours</h1>

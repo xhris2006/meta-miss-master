@@ -116,13 +116,13 @@ export default function Navbar() {
               position: "fixed",
               top: 0,
               right: 0,
-              width: "min(320px, 90vw)",
+              width: "min(280px, 88vw)",
               height: "100vh",
               zIndex: 122,
-              padding: "18px 14px 24px",
+              padding: "14px 12px 18px",
               display: "flex",
               flexDirection: "column",
-              gap: 12,
+              gap: 10,
               background: "linear-gradient(180deg, rgba(18,4,10,.98), rgba(7,0,3,.98))",
               borderLeft: "1px solid rgba(201,147,42,.18)",
               boxShadow: "-18px 0 50px rgba(0,0,0,.38)",
@@ -167,32 +167,32 @@ export default function Navbar() {
 
             <div
               style={{
-                padding: "14px",
-                borderRadius: 18,
+                padding: "10px 12px",
+                borderRadius: 14,
                 background: "rgba(201,147,42,.06)",
                 border: "1px solid rgba(201,147,42,.12)",
                 color: "var(--text-muted)",
-                fontSize: "0.84rem",
-                lineHeight: 1.7,
+                fontSize: "0.76rem",
+                lineHeight: 1.55,
               }}
             >
               Utilisez ce menu pour aller vers chaque page du concours.
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {links.map(([label, href]) => (
                 <Link
                   key={href}
                   href={href}
                   onClick={closeMenu}
                   style={{
-                    padding: "14px 16px",
-                    borderRadius: 16,
+                    padding: "10px 12px",
+                    borderRadius: 12,
                     color: "var(--text)",
                     textDecoration: "none",
                     background: "rgba(255,255,255,.03)",
                     border: "1px solid var(--border)",
-                    fontSize: "0.92rem",
+                    fontSize: "0.84rem",
                   }}
                 >
                   {label}
@@ -200,18 +200,19 @@ export default function Navbar() {
               ))}
             </div>
 
-            <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
               <Link
                 href="/vote"
                 onClick={closeMenu}
                 style={{
-                  padding: "14px 16px",
-                  borderRadius: 16,
+                  padding: "11px 12px",
+                  borderRadius: 12,
                   textDecoration: "none",
                   textAlign: "center",
                   background: "linear-gradient(135deg,var(--gold),var(--gold-light))",
                   color: "#08000A",
                   fontWeight: 700,
+                  fontSize: "0.84rem",
                 }}
               >
                 Voter maintenant
@@ -223,12 +224,13 @@ export default function Navbar() {
                     href="/admin"
                     onClick={closeMenu}
                     style={{
-                      padding: "14px 16px",
-                      borderRadius: 16,
+                      padding: "11px 12px",
+                      borderRadius: 12,
                       textDecoration: "none",
                       textAlign: "center",
                       color: "var(--gold-light)",
                       border: "1px solid rgba(201,147,42,.24)",
+                      fontSize: "0.84rem",
                     }}
                   >
                     Administration
@@ -236,13 +238,13 @@ export default function Navbar() {
                   <button
                     onClick={handleLogout}
                     style={{
-                      padding: "14px 16px",
-                      borderRadius: 16,
+                      padding: "11px 12px",
+                      borderRadius: 12,
                       border: "1px solid rgba(239,83,80,.24)",
                       background: "transparent",
                       color: "#EF5350",
                       cursor: "pointer",
-                      fontSize: "0.9rem",
+                      fontSize: "0.84rem",
                     }}
                   >
                     Deconnexion
