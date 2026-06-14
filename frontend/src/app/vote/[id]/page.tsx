@@ -12,28 +12,11 @@ const PRESETS = [100, 500, 1000, 5000];
 const LAST_VOTE_KEY = (candidateId: string) => `mmm-last-vote-${candidateId}`;
 const COOLDOWN_MS = 5 * 60 * 1000;
 
-const PROVIDERS = [
-  {
-    id: "fapshi",
-    label: "Fapshi",
-    sub: "MTN · Orange Money",
-    badge: "🇨🇲 Recommandé Cameroun",
-    badgeColor: "#16a34a",
-  },
-  {
-    id: "paypal",
-    label: "PayPal",
-    sub: "Visa · Mastercard · PayPal",
-    badge: "🌍 Recommandé Europe & International",
-    badgeColor: "#1d4ed8",
-  },
-  {
-    id: "geniuspay",
-    label: "GeniusPay",
-    sub: "Mobile Money · Carte",
-    badge: "🌐 Recommandé Afrique de l'Ouest & Centrale",
-    badgeColor: "#7c3aed",
-  },
+// Méthodes affichées à l'utilisateur. Orange & MTN passent par Fapshi côté back.
+const METHODS = [
+  { id: "orange", provider: "fapshi", label: "Orange Money", sub: "Paiement mobile", img: "/pay/orange-money.svg", badge: "Recommandé", badgeColor: "#FF7900" },
+  { id: "mtn", provider: "fapshi", label: "MTN Mobile Money", sub: "Paiement mobile", img: "/pay/mtn-momo.svg", badge: "Recommandé", badgeColor: "#16a34a" },
+  { id: "geniuspay", provider: "geniuspay", label: "Genius Pay", sub: "Carte · International — tous les pays", img: null, badge: "🌍 Monde entier", badgeColor: "#2563EB" },
 ];
 
 const COUNTRIES = [
@@ -58,7 +41,7 @@ export default function VoteByIdPage() {
   const [candidate, setCandidate] = useState<any>(null);
   const [amount, setAmount] = useState(500);
   const [customAmount, setCustomAmount] = useState("500");
-  const [provider, setProvider] = useState("fapshi");
+  const [method, setMethod] = useState("orange");
   const [country, setCountry] = useState("CI");
   const [voterName, setVoterName] = useState("");
   const [voterEmail, setVoterEmail] = useState("");
@@ -138,8 +121,16 @@ export default function VoteByIdPage() {
   const handleConfirm = async () => {
     setLoading(true);
     try {
+      const selected = METHODS.find((m) => m.id === method) || METHODS[0];
       const { data } = await api.post("/payments/initialize", {
-        candidateId: id, amount, provider, country, voterName, voterEmail, voterPhone,
+        candidateId: id,
+        amount,
+        provider: selected.provider, // fapshi (Orange/MTN) ou geniuspay
+        operator: selected.provider === "fapshi" ? method : undefined, // orange | mtn
+        country,
+        voterName,
+        voterEmail,
+        voterPhone,
       });
       localStorage.setItem(LAST_VOTE_KEY(id as string), String(Date.now()));
       if (data.data?.paymentLink) {
@@ -237,7 +228,7 @@ export default function VoteByIdPage() {
           <div>
             <div style={{ fontWeight: 700, fontSize: "0.92rem", color: C.text }}>{candidate.name}</div>
             <div style={{ fontSize: "0.74rem", color: C.muted }}>{t.region} {candidate.city}</div>
-            <div style={{ fontSize: "0.72rem", color: C.blue, fontWeight: 600, marginTop: 2 }}>{candidate.type === "MISS" ? "Miss" : "Master"}</div>
+            <div style={{ fontSize: "0.72rem", color: C.blue, fontWeight: 600, marginTop: 2 }}>{candidate.city || "Miss"}</div>
           </div>
         </div>
         <div style={{ background: C.blueBg, border: `1px solid ${C.blueBorder}`, borderRadius: 10, padding: "12px 16px", marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -296,7 +287,7 @@ export default function VoteByIdPage() {
           <img src={photo} alt={candidate.name} className="avatar" style={{ width: 52, height: 52 }} />
           <div>
             <div style={{ fontWeight: 700, fontSize: "0.92rem", color: C.text }}>{candidate.name}</div>
-            <div style={{ fontSize: "0.72rem", color: C.blue, fontWeight: 600 }}>{candidate.type === "MISS" ? "Miss" : "Master"}</div>
+            <div style={{ fontSize: "0.72rem", color: C.blue, fontWeight: 600 }}>{candidate.city || "Miss"}</div>
           </div>
         </div>
 
@@ -343,74 +334,49 @@ export default function VoteByIdPage() {
           <span style={{ fontSize: "0.9rem", fontWeight: 700, color: C.blue }}>{amount.toLocaleString("fr-FR")} FCFA</span>
         </div>
 
-        {/* Provider */}
+        {/* Méthode de paiement */}
         <div style={{ fontSize: "0.75rem", fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{t.payment}</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-          {PROVIDERS.map(p => (
-            <button key={p.id} onClick={() => setProvider(p.id)} style={{
-              display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-              padding: "12px 14px", borderRadius: 10,
-              border: `1.5px solid ${provider === p.id ? C.blue : C.inputBorder}`,
-              background: provider === p.id ? C.blueBg : C.inputBg,
-              cursor: "pointer", fontFamily: "var(--font)", transition: "all 0.15s",
-            }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 12, textAlign: "left" }}>
-                <div style={{ width: 36, height: 36, borderRadius: 12, display: "grid", placeItems: "center", fontWeight: 700, color: "#fff", flexShrink: 0, background: p.id === "fapshi" ? "#E84C4C" : p.id === "paypal" ? "#003087" : "#5B21B6" }}>
-                  {p.id === "fapshi" ? "F" : p.id === "paypal" ? "P" : "G"}
-                </div>
-                <div>
-                  <div style={{ fontSize: "0.85rem", fontWeight: 700, color: provider === p.id ? C.blue : C.text }}>{p.label}</div>
-                  <div style={{ fontSize: "0.72rem", color: C.muted }}>{p.sub}</div>
-                  <div style={{ marginTop: 5, display: "inline-block", fontSize: "0.68rem", fontWeight: 600, color: p.badgeColor, background: `${p.badgeColor}18`, border: `1px solid ${p.badgeColor}33`, borderRadius: 20, padding: "2px 8px" }}>
-                    {p.badge}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+          {METHODS.map(m => {
+            const selected = method === m.id;
+            return (
+              <button key={m.id} onClick={() => setMethod(m.id)} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "12px 14px", borderRadius: 14,
+                border: `1.5px solid ${selected ? C.blue : C.inputBorder}`,
+                background: selected ? C.blueBg : C.inputBg,
+                cursor: "pointer", fontFamily: "var(--font)", transition: "all 0.15s",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", minWidth: 0 }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 12, overflow: "hidden", flexShrink: 0, display: "grid", placeItems: "center", background: m.img ? "transparent" : "linear-gradient(135deg,#2563EB,#3B82F6)" }}>
+                    {m.img
+                      ? <img src={m.img} alt={m.label} width={46} height={46} style={{ display: "block", borderRadius: 12 }} />
+                      : <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20"/></svg>}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: "0.9rem", fontWeight: 700, color: selected ? C.blue : C.text }}>{m.label}</div>
+                    <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 1 }}>{m.sub}</div>
+                    <div style={{ marginTop: 5, display: "inline-block", fontSize: "0.66rem", fontWeight: 700, color: m.badgeColor, background: `${m.badgeColor}18`, border: `1px solid ${m.badgeColor}33`, borderRadius: 20, padding: "2px 8px" }}>
+                      {m.badge}
+                    </div>
                   </div>
                 </div>
-              </div>
-              {provider === p.id && (
-                <div style={{ width: 20, height: 20, borderRadius: "50%", background: C.blue, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, marginLeft: 8, border: `2px solid ${selected ? C.blue : C.inputBorder}`, background: selected ? C.blue : "transparent", display: "grid", placeItems: "center" }}>
+                  {selected && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
                 </div>
-              )}
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
 
-        {provider === "fapshi" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
-            <div style={{ border: "1px solid rgba(255,100,100,0.2)", background: "rgba(255,100,100,0.08)", borderRadius: 10, padding: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                <span style={{ width: 28, height: 28, borderRadius: 8, background: "#FF7900", color: "#fff", display: "grid", placeItems: "center", fontWeight: 700 }}>O</span>
-                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: C.text }}>Orange Money</span>
-              </div>
-              <div style={{ fontSize: "0.72rem", color: C.muted }}>Paiement mobile via Fapshi</div>
-            </div>
-            <div style={{ border: "1px solid rgba(255,200,0,0.2)", background: "rgba(255,200,0,0.06)", borderRadius: 10, padding: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                <span style={{ width: 28, height: 28, borderRadius: 8, background: "#FFD600", color: "#1F2937", display: "grid", placeItems: "center", fontWeight: 700 }}>M</span>
-                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: C.text }}>MTN Money</span>
-              </div>
-              <div style={{ fontSize: "0.72rem", color: C.muted }}>Paiement mobile via Fapshi</div>
-            </div>
-          </div>
-        )}
-
-        {provider === "paypal" && (
-          <div style={{ background: isDark ? "rgba(0,48,135,0.3)" : "rgba(0,48,135,0.06)", border: "1px solid rgba(0,48,135,0.2)", borderRadius: 10, padding: 14, marginBottom: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-              <span style={{ width: 28, height: 28, borderRadius: 8, background: "#003087", color: "#fff", display: "grid", placeItems: "center", fontWeight: 700 }}>P</span>
-              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: C.text }}>PayPal</div>
-            </div>
-            <div style={{ fontSize: "0.72rem", color: C.muted }}>Paiement international depuis l'Europe et les appareils mobiles.</div>
-          </div>
-        )}
-
-        {provider === "geniuspay" && (
+        {/* Genius Pay : sélection du pays (disponible partout dans le monde) */}
+        {method === "geniuspay" && (
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: "0.75rem", fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Pays</div>
             <select value={country} onChange={e => setCountry(e.target.value)} style={{ ...inputStyle, appearance: "none", MozAppearance: "none", WebkitAppearance: "none" }}>
               {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
             </select>
-            <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 10 }}>GeniusPay sélectionnera le meilleur mode de paiement disponible pour votre pays.</div>
+            <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 10 }}>Genius Pay choisit automatiquement le meilleur moyen de paiement disponible dans votre pays — partout dans le monde.</div>
           </div>
         )}
 

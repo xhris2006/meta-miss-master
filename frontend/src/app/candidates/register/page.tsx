@@ -33,7 +33,7 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { type: "MISS", email: user?.email || "" },
   });
@@ -46,8 +46,6 @@ export default function RegisterPage() {
   useEffect(() => {
     if (user?.email) setValue("email", user.email);
   }, [user, setValue]);
-
-  const selectedType = watch("type");
 
   const handleFile = (f: File) => {
     if (f.size > 5 * 1024 * 1024) { toast.error("Max 5MB"); return; }
@@ -281,34 +279,8 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* ── Section 3 : Catégorie ── */}
-          <div style={section}>
-            <div style={sectionTitle}><span>🏆</span> Catégorie *</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {[{ v: "MISS", l: "Miss", emoji: "👑" }, { v: "MASTER", l: "Master", emoji: "🎯" }].map(o => {
-                const selected = selectedType === o.v;
-                return (
-                  <label key={o.v} style={{ cursor: "pointer" }}>
-                    <input {...register("type")} type="radio" value={o.v} style={{ display: "none" }} />
-                    <div style={{
-                      padding: "14px 10px",
-                      borderRadius: 12,
-                      textAlign: "center",
-                      border: "1.5px solid " + (selected ? "#2563EB" : "var(--border)"),
-                      background: selected ? "var(--blue-light)" : "var(--bg)",
-                      color: selected ? "#2563EB" : "var(--text-muted)",
-                      fontSize: "0.85rem",
-                      fontWeight: 700,
-                      transition: "all 0.15s",
-                    }}>
-                      <div style={{ fontSize: "1.4rem", marginBottom: 4 }}>{o.emoji}</div>
-                      {o.l}
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
+          {/* Catégorie fixée à Miss (un seul type) */}
+          <input {...register("type")} type="hidden" value="MISS" />
 
           {/* ── Section 4 : Bio ── */}
           <div style={section}>

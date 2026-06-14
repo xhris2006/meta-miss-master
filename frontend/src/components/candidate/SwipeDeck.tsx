@@ -385,7 +385,7 @@ export default function SwipeDeck({
               <div className="name">{current.name}</div>
               <span className="swipe-cat">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M2 19h20v2H2v-2zm18-9l-3 9H7L4 10l4 3 4-6 4 6 4-3z" /></svg>
-                {current.category || (current.type === "MASTER" ? "Master" : current.type === "MISS" ? "Miss" : "Élégance")}
+                {current.category || "Miss"}
                 {current.city ? ` · ${current.city}` : ""}
               </span>
               {current.bio && <div className="swipe-bio">{current.bio}</div>}

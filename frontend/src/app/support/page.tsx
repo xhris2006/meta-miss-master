@@ -6,16 +6,16 @@ import { useLangStore } from "@/store/langStore";
 import api from "@/lib/api";
 
 const faqsFr = [
-  { q: "Comment voter ?", a: "Choisissez un candidat, cliquez 'Voter', choisissez le montant (100 FCFA = 1 vote) et payez via Mobile Money ou PayPal." },
-  { q: "Combien coûte un vote ?", a: "1 vote = 100 FCFA. Vous pouvez voter autant de fois que vous le souhaitez pour soutenir votre candidat." },
-  { q: "Quels paiements sont acceptés ?", a: "Fapshi (MTN / Orange Money), PayPal (international) et GeniusPay (multi-pays)." },
+  { q: "Comment voter ?", a: "Choisissez une candidate, cliquez 'Voter', choisissez le montant (100 FCFA = 1 vote) et payez via Orange Money, MTN Mobile Money ou Genius Pay." },
+  { q: "Combien coûte un vote ?", a: "1 vote = 100 FCFA. Vous pouvez voter autant de fois que vous le souhaitez pour soutenir votre candidate." },
+  { q: "Quels paiements sont acceptés ?", a: "Orange Money et MTN Mobile Money pour le mobile, et Genius Pay pour les paiements internationaux (tous les pays)." },
   { q: "Mes votes sont-ils instantanés ?", a: "Oui. Dès validation du paiement, vos votes sont comptabilisés dans le classement en temps réel." },
   { q: "Comment participer au concours ?", a: "Accédez à la section Candidats et cliquez sur 'Soumettre ma candidature'. Validation sous 24h par notre équipe." },
 ];
 const faqsEn = [
-  { q: "How to vote?", a: "Choose a candidate, click 'Vote', choose the amount (100 FCFA = 1 vote) and pay via Mobile Money or PayPal." },
+  { q: "How to vote?", a: "Choose a candidate, click 'Vote', choose the amount (100 FCFA = 1 vote) and pay via Orange Money, MTN Mobile Money or Genius Pay." },
   { q: "How much does a vote cost?", a: "1 vote = 100 FCFA. You can vote as many times as you want." },
-  { q: "What payment methods are accepted?", a: "Fapshi (MTN / Orange Money), PayPal (international) and GeniusPay." },
+  { q: "What payment methods are accepted?", a: "Orange Money and MTN Mobile Money for mobile, and Genius Pay for international payments (all countries)." },
   { q: "Are my votes instant?", a: "Yes. Once payment is validated, your votes are counted in the real-time ranking." },
   { q: "How to join the competition?", a: "Go to the Candidates section and click 'Submit my candidacy'. Validated within 24h." },
 ];
@@ -70,7 +70,7 @@ export default function SupportPage() {
         {/* Hero */}
         <div style={{ background: "linear-gradient(135deg, var(--blue) 0%, #7C3AED 100%)", borderRadius: 18, padding: "24px 20px", marginBottom: 24, color: "#fff", textAlign: "center" }}>
           <div style={{ fontSize: "2.2rem", marginBottom: 10 }}>🎭</div>
-          <div style={{ fontWeight: 800, fontSize: "1.1rem", marginBottom: 6 }}>MetaMiss · Master 2025</div>
+          <div style={{ fontWeight: 800, fontSize: "1.1rem", marginBottom: 6 }}>MetaMiss · Master 2026</div>
           <div style={{ fontSize: "0.82rem", opacity: 0.85, lineHeight: 1.6 }}>Rejoignez la communauté et suivez le concours en temps réel sur nos réseaux.</div>
         </div>
 

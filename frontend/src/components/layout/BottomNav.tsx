@@ -20,7 +20,7 @@ export default function BottomNav() {
     },
     {
       href: "/candidates",
-      label: t.categories,
+      label: t.candidates || "Candidates",
       icon: (active: boolean) => (
         <svg viewBox="0 0 24 24" fill="none" stroke={active ? "var(--blue)" : "var(--text-muted)"} strokeWidth="2">
           <rect x="3" y="3" width="7" height="7" rx="1" />

@@ -5,21 +5,21 @@ import ThemeProvider from "@/components/layout/ThemeProvider";
 import BottomNav from "@/components/layout/BottomNav";
 
 export const metadata: Metadata = {
-  title: "MetaMiss Master 2025",
-  description: "Votez pour vos candidats préférés au concours MetaMiss Master 2025.",
+  title: "MetaMiss Master 2026",
+  description: "Votez pour vos candidats préférés au concours MetaMiss Master 2026.",
   keywords: ["miss master", "concours", "vote", "cameroun"],
   openGraph: {
-    title: "MetaMiss Master 2025",
+    title: "MetaMiss Master 2026",
     description: "🗳️ Votez pour vos candidats préférés · Résultats en direct",
     url: "https://metavote.online",
-    siteName: "MetaMiss Master 2025",
-    images: [{ url: "https://metavote.online/og-image.jpg", width: 1200, height: 630, alt: "MetaMiss Master 2025" }],
+    siteName: "MetaMiss Master 2026",
+    images: [{ url: "https://metavote.online/og-image.jpg", width: 1200, height: 630, alt: "MetaMiss Master 2026" }],
     type: "website",
     locale: "fr_FR",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MetaMiss Master 2025",
+    title: "MetaMiss Master 2026",
     description: "🗳️ Votez pour vos candidats préférés · Résultats en direct",
     images: ["https://metavote.online/og-image.jpg"],
   },

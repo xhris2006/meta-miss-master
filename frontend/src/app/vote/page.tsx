@@ -56,7 +56,7 @@ export default function VoteListPage() {
               <img src={photo} alt={c.name} className="avatar" style={{ width: 48, height: 48 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--text)" }}>{c.name}</div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{c.type === "MISS" ? "Miss" : "Master"}</div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{c.city || "Miss"}</div>
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2">
                 <path d="M9 18l6-6-6-6"/>

@@ -46,7 +46,7 @@ export default function SplashPage() {
           MISS MASTER
         </div>
         <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "#2563EB", marginBottom: 32 }}>
-          2025
+          2026
         </div>
 
         <div style={{ textAlign: "center", marginBottom: 10 }}>

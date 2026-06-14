@@ -5,6 +5,7 @@ export const translations = {
     // Nav
     home: "Accueil",
     categories: "Catégories",
+    candidates: "Candidates",
     vote: "Voter",
     results: "Résultats",
     profile: "Profil",
@@ -122,6 +123,7 @@ export const translations = {
     // Nav
     home: "Home",
     categories: "Categories",
+    candidates: "Candidates",
     vote: "Vote",
     results: "Results",
     profile: "Profile",

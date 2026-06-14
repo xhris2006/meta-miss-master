@@ -11,7 +11,6 @@ export default function CandidatesPage() {
   const user = useAuthStore((state) => state.user);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"ALL" | "MISS" | "MASTER">("ALL");
   const [search, setSearch] = useState("");
   const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000";
 
@@ -23,22 +22,16 @@ export default function CandidatesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Rank within the candidate's own category (list is already vote-sorted by the API)
+  // Rank by votes (list is already vote-sorted by the API)
   const rankMap = new Map<string, number>();
-  ["MISS", "MASTER"].forEach((type) => {
-    candidates
-      .filter((c) => c.type === type)
-      .forEach((c, i) => rankMap.set(c.id, i + 1));
-  });
+  candidates.forEach((c, i) => rankMap.set(c.id, i + 1));
 
-  const filtered = candidates
-    .filter((c) => filter === "ALL" || c.type === filter)
-    .filter(
-      (c) =>
-        !search ||
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.city?.toLowerCase().includes(search.toLowerCase()),
-    );
+  const filtered = candidates.filter(
+    (c) =>
+      !search ||
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.city?.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
     <div className="page-content fade-up">
@@ -147,14 +140,6 @@ export default function CandidatesPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="cand-filter-row">
-        {(["ALL", "MISS", "MASTER"] as const).map((filterOpt) => (
-          <button key={filterOpt} onClick={() => setFilter(filterOpt)} className={`cand-chip${filter === filterOpt ? " active" : ""}`}>
-            {filterOpt === "ALL" ? t.all || "Tous" : filterOpt === "MISS" ? "Miss" : "Master"}
-          </button>
-        ))}
-      </div>
 
       {/* Loading */}
       {loading && (
@@ -211,7 +196,7 @@ export default function CandidatesPage() {
                   </div>
                   <div className="cand-card-overlay">
                     <div className="cand-card-name">{c.name}</div>
-                    <div className="cand-card-cat">{c.type === "MASTER" ? "Master" : "Miss"}{c.city ? ` · ${c.city}` : ""}</div>
+                    <div className="cand-card-cat">{c.city || "Miss"}</div>
                   </div>
                 </div>
                 <div className="cand-card-foot">

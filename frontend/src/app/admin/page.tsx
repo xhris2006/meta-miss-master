@@ -536,7 +536,7 @@ export default function AdminPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
                   <label style={S.lbl}>Type</label>
-                  <select value={editValues.type} onChange={e => setEditValues({...editValues,type:e.target.value})} style={S.inp}><option value="MISS">MISS</option><option value="MASTER">MASTER</option></select>
+                  <select value={editValues.type} onChange={e => setEditValues({...editValues,type:e.target.value})} style={S.inp}><option value="MISS">MISS</option></select>
                 </div>
                 <div>
                   <label style={S.lbl}>Statut</label>

@@ -57,8 +57,8 @@ export default function CandidateCard({ candidate, index = 0 }: { candidate: Can
           position: "absolute", top: 10, left: 10, zIndex: 2,
           padding: "4px 11px", borderRadius: 100,
           fontSize: "0.66rem", fontWeight: 700, letterSpacing: "0.1em",
-        }} className={isMiss ? "badge-miss" : "badge-master"}>
-          {isMiss ? "♛ MISS" : "♚ MASTER"}
+        }} className="badge-miss">
+          ♛ MISS
         </div>
 
         {/* Rank badge */}

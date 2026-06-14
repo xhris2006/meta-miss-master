@@ -25,9 +25,7 @@ interface TopVoter {
 
 export default function RankingPage() {
   const t = useT();
-  const [tab, setTab] = useState<"MISS" | "MASTER">("MISS");
   const [miss, setMiss] = useState<RC[]>([]);
-  const [master, setMaster] = useState<RC[]>([]);
   const [topVoters, setTopVoters] = useState<TopVoter[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingVoters, setLoadingVoters] = useState(true);
@@ -39,7 +37,6 @@ export default function RankingPage() {
   useEffect(() => {
     Promise.all([
       api.get("/ranking?type=MISS").then((r) => setMiss(r.data.data || [])),
-      api.get("/ranking?type=MASTER").then((r) => setMaster(r.data.data || [])),
       api
         .get("/ranking/top-voters")
         .then((r) => setTopVoters(r.data.data || []))
@@ -60,7 +57,6 @@ export default function RankingPage() {
     socket.on("disconnect", () => setLive(false));
     socket.on("ranking:update", (d) => {
       setMiss(d.miss || []);
-      setMaster(d.master || []);
       if (d.topVoters) setTopVoters(d.topVoters);
     });
     return () => {
@@ -68,7 +64,7 @@ export default function RankingPage() {
     };
   }, []);
 
-  const current = tab === "MISS" ? miss : master;
+  const current = miss;
   const total = current.reduce((sum, c) => sum + c.totalVotes, 0) || 1;
   const pct = (v: number) => Math.round((v / total) * 100);
 
@@ -90,7 +86,7 @@ export default function RankingPage() {
   const handleWhatsApp = () => {
     window.open(
       `https://wa.me/?text=${encodeURIComponent(
-        "Classement Meta Miss Master 2025 : " + window.location.href
+        "Classement Meta Miss Master 2026 : " + window.location.href
       )}`,
       "_blank"
     );
@@ -98,7 +94,7 @@ export default function RankingPage() {
   const handleTwitter = () => {
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        "Classement Meta Miss Master 2025"
+        "Classement Meta Miss Master 2026"
       )}&url=${encodeURIComponent(window.location.href)}`,
       "_blank"
     );
@@ -192,7 +188,7 @@ export default function RankingPage() {
         /* Table header */
         .rk-table-head {
           display: grid;
-          grid-template-columns: 44px 1fr 80px 72px;
+          grid-template-columns: 44px 1fr auto;
           gap: 0;
           padding: 10px 16px;
           background: var(--bg);
@@ -210,7 +206,7 @@ export default function RankingPage() {
         /* Table rows */
         .rk-row {
           display: grid;
-          grid-template-columns: 44px 1fr 80px 72px;
+          grid-template-columns: 44px 1fr auto;
           gap: 0;
           align-items: center;
           padding: 12px 16px;
@@ -269,25 +265,22 @@ export default function RankingPage() {
           transition: width 0.8s ease;
         }
 
-        /* Percentage cell */
-        .rk-pct {
-          font-size: 0.95rem;
+        /* Score cell : percentage (big) + votes (small) */
+        .rk-score {
+          text-align: right;
+          min-width: 64px;
+        }
+        .rk-score-pct {
+          font-size: 1rem;
           font-weight: 800;
           color: var(--blue);
-          text-align: right;
+          line-height: 1.1;
         }
-
-        /* Votes cell */
-        .rk-votes {
-          font-size: 0.82rem;
-          font-weight: 700;
-          color: var(--text);
-          text-align: right;
-        }
-        .rk-votes-sub {
-          font-size: 0.62rem;
+        .rk-score-votes {
+          font-size: 0.66rem;
           color: var(--text-muted);
-          font-weight: 500;
+          font-weight: 600;
+          margin-top: 1px;
         }
 
         /* Live badge */
@@ -551,19 +544,18 @@ export default function RankingPage() {
 
         /* Mobile: compact layout */
         @media (max-width: 480px) {
-          .rk-table-head { grid-template-columns: 36px 1fr 52px 54px; padding: 8px 12px; }
-          .rk-row { grid-template-columns: 36px 1fr 52px 54px; padding: 10px 12px; }
+          .rk-table-head { grid-template-columns: 36px 1fr auto; padding: 8px 12px; }
+          .rk-row { grid-template-columns: 36px 1fr auto; padding: 10px 12px; }
           .rk-rank { width: 24px; height: 24px; font-size: 0.68rem; }
           .rk-cand-photo { width: 38px; height: 38px; border-radius: 8px; }
           .rk-cand-name { font-size: 0.78rem; }
-          .rk-pct { font-size: 0.82rem; }
-          .rk-votes { font-size: 0.75rem; }
-          .rk-votes-sub { font-size: 0.58rem; }
-          .rk-progress { max-width: 80px; }
+          .rk-score-pct { font-size: 0.9rem; }
+          .rk-score-votes { font-size: 0.6rem; }
+          .rk-progress { max-width: 90px; }
         }
         @media (max-width: 360px) {
-          .rk-table-head { grid-template-columns: 32px 1fr 46px 48px; padding: 8px 10px; }
-          .rk-row { grid-template-columns: 32px 1fr 46px 48px; padding: 8px 10px; }
+          .rk-table-head { grid-template-columns: 32px 1fr auto; padding: 8px 10px; }
+          .rk-row { grid-template-columns: 32px 1fr auto; padding: 8px 10px; }
           .rk-cand-photo { width: 34px; height: 34px; }
           .rk-cand-name { font-size: 0.72rem; }
           .rk-progress { display: none; }
@@ -575,32 +567,10 @@ export default function RankingPage() {
         <div className="rk-header-left">
           <h1>Résultats en direct</h1>
           <div className="rk-header-sub">
-            Classement des candidates — Catégorie{" "}
-            {tab === "MISS" ? "Miss" : "Master"}
+            Classement des candidates
           </div>
         </div>
-        <span className="rk-edition-badge">Édition 2025</span>
-      </div>
-
-      {/* ── TABS ── */}
-      <div className="rk-tabs">
-        {(["MISS", "MASTER"] as const).map((tabOpt) => (
-          <button
-            key={tabOpt}
-            onClick={() => setTab(tabOpt)}
-            className={`rk-tab${tab === tabOpt ? " active" : ""}`}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M2 19h20v2H2v-2zm18-9l-3 9H7L4 10l4 3 4-6 4 6 4-3z" />
-            </svg>
-            {tabOpt === "MISS" ? "Miss" : "Master"}
-          </button>
-        ))}
+        <span className="rk-edition-badge">Édition 2026</span>
       </div>
 
       {/* ── TABLE ── */}
@@ -609,8 +579,7 @@ export default function RankingPage() {
         <div className="rk-table-head">
           <div className="rk-th">#</div>
           <div className="rk-th">Candidate</div>
-          <div className="rk-th right">Pourcentage</div>
-          <div className="rk-th right">Votes</div>
+          <div className="rk-th right">Score</div>
         </div>
 
         {/* Loading skeletons */}
@@ -758,13 +727,10 @@ export default function RankingPage() {
                   </div>
                 </div>
 
-                {/* Percentage */}
-                <div className="rk-pct">{percent}%</div>
-
-                {/* Votes */}
-                <div className="rk-votes">
-                  {vDisplay}
-                  <div className="rk-votes-sub">votes</div>
+                {/* Score : pourcentage (gros) + votes (petit) */}
+                <div className="rk-score">
+                  <div className="rk-score-pct">{percent}%</div>
+                  <div className="rk-score-votes">{vDisplay} votes</div>
                 </div>
               </Link>
             );
@@ -875,7 +841,6 @@ export default function RankingPage() {
         {!loadingVoters &&
           topVoters.map((v, i) => {
             const medals = ["🥇", "🥈", "🥉"];
-            const isMiss = v.candidateType === "MISS";
             const vDisplay =
               v.totalVotes >= 1000
                 ? `${(v.totalVotes / 1000).toFixed(1)}K`
@@ -931,13 +896,7 @@ export default function RankingPage() {
                       </svg>
                       {v.candidateName}
                     </span>
-                    <span
-                      className={
-                        isMiss ? "tv-type-badge-miss" : "tv-type-badge-master"
-                      }
-                    >
-                      {v.candidateType}
-                    </span>
+                    <span className="tv-type-badge-miss">Miss</span>
                   </div>
                 </div>
 

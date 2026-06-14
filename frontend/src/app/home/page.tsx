@@ -9,7 +9,6 @@ export default function HomeDashboardPage() {
   const t = useT();
   const [stats, setStats] = useState<any>(null);
   const [topMiss, setTopMiss] = useState<any[]>([]);
-  const [topMaster, setTopMaster] = useState<any[]>([]);
   const [contest, setContest] = useState<any>(null);
   const [loadingCandidates, setLoadingCandidates] = useState(true);
   const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000";
@@ -17,10 +16,10 @@ export default function HomeDashboardPage() {
   useEffect(() => {
     api.get("/ranking/stats").then((r) => setStats(r.data.data)).catch(() => {});
     api.get("/contest/active").then((r) => setContest(r.data.data)).catch(() => {});
-    Promise.all([
-      api.get("/candidates/top?type=MISS&limit=6").then((r) => setTopMiss(r.data.data || [])).catch(() => {}),
-      api.get("/candidates/top?type=MASTER&limit=6").then((r) => setTopMaster(r.data.data || [])).catch(() => {}),
-    ]).finally(() => setLoadingCandidates(false));
+    api.get("/candidates/top?type=MISS&limit=10")
+      .then((r) => setTopMiss(r.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoadingCandidates(false));
   }, []);
 
   const contestInfo = (() => {
@@ -40,7 +39,7 @@ export default function HomeDashboardPage() {
     return { label: "∞", sub: "Sans date de fin", color: "#10B981" };
   })();
 
-  const topAll = [...topMiss, ...topMaster].slice(0, 8);
+  const topAll = topMiss.slice(0, 10);
   const totalVotes = stats?.totalVotesCount;
   const votesDisplay = totalVotes >= 1000 ? `${(totalVotes / 1000).toFixed(1)}K` : totalVotes ?? "—";
 
@@ -386,11 +385,11 @@ export default function HomeDashboardPage() {
         <div className="home-hero-bg-circle" style={{ width: 60, height: 60, top: 20, left: 200 }} />
 
         <div className="home-hero-content">
-          <span className="home-hero-edition">Édition 2025</span>
+          <span className="home-hero-edition">Édition 2026</span>
           <div className="home-hero-title">
             META<br />
             MISS MASTER<br />
-            2025
+            2026
           </div>
           <div className="home-hero-sub">Votez maintenant · Résultats en direct</div>
           <Link href="/ranking" className="home-hero-cta">
@@ -518,7 +517,7 @@ export default function HomeDashboardPage() {
                       <div className="home-cand-rank" style={{ background: rankColor }}>{i + 1}</div>
                       <div className="home-cand-overlay">
                         <div className="home-cand-name">{c.name.split(" ")[0]}</div>
-                        <div className="home-cand-type">{c.type === "MISS" ? "Miss" : "Master"}</div>
+                        <div className="home-cand-type">{c.city || "Miss"}</div>
                       </div>
                     </div>
                     <div className="home-cand-body">
