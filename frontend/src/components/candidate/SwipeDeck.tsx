@@ -38,7 +38,10 @@ interface SwipeDeckProps {
   onIndexChange: (next: number) => void;
   apiBase: string;
   likedIds?: Set<string>;
+  /** Add a like (double-tap gesture) — idempotent. */
   onLike?: (id: string) => void;
+  /** Toggle like/unlike (heart button). */
+  onToggleLike?: (id: string) => void;
   /** Returns the 1-based ranking position of a candidate. */
   getRank?: (c: SwipeCandidate) => number;
 }
@@ -53,6 +56,7 @@ export default function SwipeDeck({
   apiBase,
   likedIds,
   onLike,
+  onToggleLike,
   getRank,
 }: SwipeDeckProps) {
   const x = useMotionValue(0);
@@ -124,9 +128,19 @@ export default function SwipeDeck({
     else animate(x, 0, { type: "spring", stiffness: 320, damping: 28 });
   };
 
+  // Double-tap gesture → add a like (idempotent) + heart burst.
   const triggerLike = () => {
     if (current && onLike) onLike(current.id);
     setHeartBurst((k) => k + 1);
+  };
+
+  // Heart button → toggle like/unlike. Burst only when it becomes a like.
+  const handleHeartButton = () => {
+    if (!current) return;
+    const willLike = !likedIds?.has(current.id);
+    if (onToggleLike) onToggleLike(current.id);
+    else if (onLike) onLike(current.id);
+    if (willLike) setHeartBurst((k) => k + 1);
   };
 
   // Manual double-tap detection (Framer's onTap fires only on non-drag taps).
@@ -375,7 +389,7 @@ export default function SwipeDeck({
                 {current.city ? ` · ${current.city}` : ""}
               </span>
               {current.bio && <div className="swipe-bio">{current.bio}</div>}
-              <Socials c={current} isLiked={isLiked} onLike={triggerLike} />
+              <Socials c={current} isLiked={isLiked} onLike={handleHeartButton} />
             </div>
         </motion.div>
 

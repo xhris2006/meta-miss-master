@@ -85,7 +85,7 @@ export default function CandidateDetailPage() {
     return i >= 0 ? i + 1 : 1;
   };
 
-  // Double-tap / heart button → add like (idempotent)
+  // Double-tap gesture → add like (idempotent)
   const likeCandidate = useCallback(
     async (cid: string) => {
       if (likedSet.has(cid)) return;
@@ -114,6 +114,41 @@ export default function CandidateDetailPage() {
       }
     },
     [likedSet, likesKey],
+  );
+
+  // Heart button → toggle: add if not liked, remove if already liked
+  const toggleLikeCandidate = useCallback(
+    async (cid: string) => {
+      if (!likedSet.has(cid)) {
+        likeCandidate(cid);
+        return;
+      }
+      // Optimistically remove the like
+      setLikedSet((prev) => {
+        const s = new Set(prev);
+        s.delete(cid);
+        localStorage.setItem(likesKey, JSON.stringify(Array.from(s)));
+        return s;
+      });
+      setList((prev) => prev.map((c) => (c.id === cid ? { ...c, totalLikes: Math.max(0, (c.totalLikes || 0) - 1) } : c)));
+      try {
+        const res = await api.delete(`/candidates/${cid}/like`);
+        const total = res.data?.data?.totalLikes;
+        if (typeof total === "number") {
+          setList((prev) => prev.map((c) => (c.id === cid ? { ...c, totalLikes: total } : c)));
+        }
+        toast("Retiré des favoris");
+      } catch {
+        // revert on failure
+        setLikedSet((prev) => {
+          const s = new Set(prev);
+          s.add(cid);
+          localStorage.setItem(likesKey, JSON.stringify(Array.from(s)));
+          return s;
+        });
+      }
+    },
+    [likedSet, likesKey, likeCandidate],
   );
 
   if (loading) {
@@ -248,6 +283,7 @@ export default function CandidateDetailPage() {
             apiBase={apiBase}
             likedIds={likedSet}
             onLike={likeCandidate}
+            onToggleLike={toggleLikeCandidate}
             getRank={rankOf}
           />
         </div>
