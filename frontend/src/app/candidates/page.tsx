@@ -72,14 +72,24 @@ export default function CandidatesPage() {
         @media (min-width: 980px) { .cand-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 0 24px; } }
 
         .cand-card {
-          background: var(--bg-white); border-radius: 18px; overflow: hidden; border: 1px solid var(--border);
+          background: var(--bg-white); border-radius: 18px; overflow: hidden; border: 1.5px solid var(--border);
           box-shadow: var(--shadow); text-decoration: none; display: block; position: relative;
-          transition: transform 0.2s, box-shadow 0.2s;
+          transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
         }
-        .cand-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .cand-card:hover {
+          transform: translateY(-6px);
+          border-color: var(--blue);
+          box-shadow: 0 14px 30px rgba(37,99,235,0.22);
+        }
+        .cand-card:active { transform: translateY(-2px) scale(0.99); }
         .cand-card-img-wrap { position: relative; aspect-ratio: 3/4; background: var(--bg); overflow: hidden; }
-        .cand-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.45s; }
-        .cand-card:hover .cand-card-img-wrap img { transform: scale(1.05); }
+        .cand-card-img-wrap::after {
+          content: ""; position: absolute; inset: 0; background: rgba(37,99,235,0);
+          transition: background 0.22s ease;
+        }
+        .cand-card:hover .cand-card-img-wrap::after { background: rgba(37,99,235,0.08); }
+        .cand-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+        .cand-card:hover .cand-card-img-wrap img { transform: scale(1.07); }
 
         .cand-card-rank {
           position: absolute; top: 9px; left: 9px; background: rgba(37,99,235,0.92); backdrop-filter: blur(6px);

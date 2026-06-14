@@ -10,7 +10,7 @@ import { useThemeStore } from "@/store/themeStore";
 const PRESETS = [100, 500, 1000, 5000];
 
 const LAST_VOTE_KEY = (candidateId: string) => `mmm-last-vote-${candidateId}`;
-const COOLDOWN_MS = 5 * 60 * 1000;
+const COOLDOWN_MS = 30 * 1000;
 
 // Méthodes affichées à l'utilisateur. Orange & MTN passent par Fapshi côté back.
 const METHODS = [
@@ -191,7 +191,7 @@ export default function VoteByIdPage() {
         {formatCooldown(cooldownLeft)}
       </div>
       <p style={{ fontSize: "0.78rem", color: C.muted, marginBottom: 32 }}>
-        ⏱ Veuillez patienter 5 minutes avant de voter à nouveau
+        ⏱ Veuillez patienter 30 secondes avant de voter à nouveau
       </p>
       <div style={{ display: "flex", gap: 10, width: "100%", maxWidth: 340 }}>
         <a href="/ranking" className="btn-blue" style={{ flex: 1 }}>{t.seeResults}</a>
@@ -257,7 +257,7 @@ export default function VoteByIdPage() {
       <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: C.text, marginBottom: 10 }}>{t.thankYou}</h2>
       <p style={{ fontSize: "0.88rem", color: C.muted, lineHeight: 1.7, marginBottom: 16, maxWidth: 260 }}>{t.voteSuccess}</p>
       <p style={{ fontSize: "0.82rem", color: C.blue, fontWeight: 600, marginBottom: 32 }}>
-        ⏱ Veuillez patienter 5 min avant de voter à nouveau
+        ⏱ Veuillez patienter 30 secondes avant de voter à nouveau
       </p>
       <div style={{ display: "flex", gap: 10, width: "100%", maxWidth: 340 }}>
         <a href="/ranking" className="btn-blue" style={{ flex: 1 }}>{t.seeResults}</a>

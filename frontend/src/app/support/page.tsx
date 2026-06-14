@@ -10,14 +10,14 @@ const faqsFr = [
   { q: "Combien coûte un vote ?", a: "1 vote = 100 FCFA. Vous pouvez voter autant de fois que vous le souhaitez pour soutenir votre candidate." },
   { q: "Quels paiements sont acceptés ?", a: "Orange Money et MTN Mobile Money pour le mobile, et Genius Pay pour les paiements internationaux (tous les pays)." },
   { q: "Mes votes sont-ils instantanés ?", a: "Oui. Dès validation du paiement, vos votes sont comptabilisés dans le classement en temps réel." },
-  { q: "Comment participer au concours ?", a: "Accédez à la section Candidats et cliquez sur 'Soumettre ma candidature'. Validation sous 24h par notre équipe." },
+  { q: "Comment participer au concours ?", a: "Accédez à la section Candidats et cliquez sur 'Soumettre ma candidature'. Votre candidature est validée par notre équipe." },
 ];
 const faqsEn = [
   { q: "How to vote?", a: "Choose a candidate, click 'Vote', choose the amount (100 FCFA = 1 vote) and pay via Orange Money, MTN Mobile Money or Genius Pay." },
   { q: "How much does a vote cost?", a: "1 vote = 100 FCFA. You can vote as many times as you want." },
   { q: "What payment methods are accepted?", a: "Orange Money and MTN Mobile Money for mobile, and Genius Pay for international payments (all countries)." },
   { q: "Are my votes instant?", a: "Yes. Once payment is validated, your votes are counted in the real-time ranking." },
-  { q: "How to join the competition?", a: "Go to the Candidates section and click 'Submit my candidacy'. Validated within 24h." },
+  { q: "How to join the competition?", a: "Go to the Candidates section and click 'Submit my candidacy'. Your application is validated by our team." },
 ];
 
 interface SocialLinks {

@@ -149,17 +149,17 @@ export default function RegisterPage() {
             </svg>
           </div>
           <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text)", marginBottom: 10 }}>
-            Candidature envoyée ! 🎉
+            Candidature enregistrée ! 🎉
           </h2>
           <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.75, marginBottom: 10, maxWidth: 320 }}>
-            Vos informations ont bien été reçues et sont en cours de vérification par notre équipe.
+            Votre candidature a bien été enregistrée. Bienvenue parmi les candidates !
           </p>
           {/* Message email bien visible */}
           <div style={{ background: "var(--blue-light)", border: "1.5px solid #BFDBFE", borderRadius: 12, padding: "14px 18px", marginBottom: 28, maxWidth: 340, width: "100%" }}>
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
               <span style={{ fontSize: "1.3rem", flexShrink: 0 }}>📧</span>
               <p style={{ fontSize: "0.82rem", color: "var(--blue)", lineHeight: 1.65, margin: 0, textAlign: "left" }}>
-                Vous recevrez un <strong>e-mail de confirmation</strong> une fois vos informations vérifiées. Vérifiez aussi vos spams.
+                Vous recevrez un <strong>e-mail de confirmation</strong>. Pensez à vérifier vos spams.
               </p>
             </div>
           </div>
@@ -323,7 +323,7 @@ export default function RegisterPage() {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
-            Vos données sont sécurisées · Validation sous 24h
+            Vos données sont sécurisées
           </div>
 
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
