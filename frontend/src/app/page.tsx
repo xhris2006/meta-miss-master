@@ -1,4 +1,7 @@
 import Link from "next/link";
+import LandingCandidates from "@/components/LandingCandidates";
+import LangSelector from "@/components/ui/LangSelector";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export default function LandingPage() {
   return (
@@ -79,6 +82,12 @@ export default function LandingPage() {
       `}</style>
 
       <div className="lp">
+        {/* Utility row : thème + langue */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginBottom: 14 }}>
+          <ThemeToggle />
+          <LangSelector />
+        </div>
+
         {/* Brand header */}
         <div className="lp-top">
           <div className="lp-brand">
@@ -95,6 +104,10 @@ export default function LandingPage() {
         <div className="lp-eyebrow">Plateforme officielle de vote</div>
         <h1 className="lp-title">Votez pour vos <span>candidates</span> préférées</h1>
         <p className="lp-sub">Soutenez vos favorites et contribuez à faire gagner la meilleure candidate. Simple, rapide et 100% sécurisé.</p>
+
+        {/* Bandeau défilant des candidates (boucle infinie, mis à jour automatiquement) */}
+        <LandingCandidates />
+
         <Link href="/candidates" className="lp-cta">
           Commencer à voter
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

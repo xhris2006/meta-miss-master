@@ -275,32 +275,33 @@ export default function AdminPage() {
 
           {/* ── CANDIDATES ── */}
           {tab === "candidates" && (
-            <div style={{ display: "grid", gap: 10 }}>
-              {candidates.map(c => {
+            <div style={{ display: "grid", gap: 12 }}>
+              {candidates.map((c, i) => {
                 const photo = c.photoUrl?.startsWith("http") ? c.photoUrl : `${apiBase}${c.photoUrl}`;
                 return (
-                  <div key={c.id} style={{ ...S.card, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-                    <div onClick={() => setViewingCandidate(c)} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0, cursor: "pointer" }}>
-                      <div style={{ width: 52, height: 52, borderRadius: 16, overflow: "hidden", background: "#EFF6FF", position: "relative", flexShrink: 0 }}>
-                        <Image src={photo} alt={c.name} fill style={{ objectFit: "cover" }} onError={(e:any)=>{e.target.style.display="none";}} />
+                  <div key={c.id} className="acand-row" style={{ ...S.card }}>
+                    <div className="acand-main" onClick={() => setViewingCandidate(c)}>
+                      <div className="acand-photo">
+                        <Image src={photo} alt={c.name} fill style={{ objectFit: "cover" }} onError={(e: any) => { e.target.style.display = "none"; }} />
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
-                        <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>{c.email || c.city} · {c.totalVotes} votes</div>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                          <span style={S.pill(c.type==="MISS"?"#EC4899":"#6366F1")}>{c.type}</span>
-                          <span style={S.pill(sc(c.status))}>{c.status}</span>
+                      <div className="acand-info">
+                        <div className="acand-top">
+                          <span className="acand-rank">#{String(i + 1).padStart(2, "0")}</span>
+                          <span className="acand-dot" style={{ background: sc(c.status) }} title={c.status} />
+                        </div>
+                        <div className="acand-name">{c.name}</div>
+                        <div className="acand-sub">{c.city || "—"}</div>
+                        <div className="acand-votes">
+                          <Trophy size={13} color="#F59E0B" /> {c.totalVotes ?? 0}
                         </div>
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                      <button title="Télécharger la fiche PDF" onClick={() => handleCandidatePdf(c)} style={{ width: 36, height: 36, borderRadius: 10, border: "1.5px solid #2563EB30", background: "#2563EB10", display: "grid", placeItems: "center", cursor: "pointer" }}><FileDown size={15} color="#2563EB" /></button>
-                      <button onClick={() => openEdit(c)} style={{ width: 36, height: 36, borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#fff", display: "grid", placeItems: "center", cursor: "pointer" }}><Edit3 size={15} color="#6366F1" /></button>
-                      {c.status === "PENDING" && <>
-                        <button onClick={() => approve(c.id)} style={{ width: 36, height: 36, borderRadius: 10, border: "1.5px solid #10B98130", background: "#10B98110", display: "grid", placeItems: "center", cursor: "pointer" }}><CheckCircle2 size={15} color="#10B981" /></button>
-                        <button onClick={() => reject(c.id)} style={{ width: 36, height: 36, borderRadius: 10, border: "1.5px solid #F59E0B30", background: "#F59E0B10", display: "grid", placeItems: "center", cursor: "pointer" }}><XCircle size={15} color="#F59E0B" /></button>
-                      </>}
-                      <button onClick={() => del(c.id)} style={{ width: 36, height: 36, borderRadius: 10, border: "1.5px solid #EF444430", background: "#EF444410", display: "grid", placeItems: "center", cursor: "pointer" }}><Trash2 size={15} color="#EF4444" /></button>
+                    <div className="acand-actions">
+                      <button onClick={() => openEdit(c)} title="Modifier"><Edit3 size={16} color="#6366F1" /></button>
+                      {c.status === "PENDING"
+                        ? <button onClick={() => approve(c.id)} title="Approuver"><CheckCircle2 size={16} color="#10B981" /></button>
+                        : <button onClick={() => handleCandidatePdf(c)} title="Fiche PDF"><FileDown size={16} color="#2563EB" /></button>}
+                      <button onClick={() => del(c.id)} title="Supprimer"><Trash2 size={16} color="#EF4444" /></button>
                     </div>
                   </div>
                 );
@@ -500,6 +501,9 @@ export default function AdminPage() {
                 <button style={{ flex: 1, fontSize: "0.82rem", background: "#10B981", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { approve(viewingCandidate.id); setViewingCandidate(null); }}>✓ Approuver</button>
               )}
             </div>
+            {viewingCandidate.status === "PENDING" && (
+              <button style={{ width: "100%", marginTop: 8, fontSize: "0.82rem", background: "#FEF2F2", color: "#EF4444", border: "1.5px solid #FECACA", borderRadius: 12, padding: "11px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { reject(viewingCandidate.id); setViewingCandidate(null); }}>✕ Rejeter la candidature</button>
+            )}
             </div>
           </div>
         </div>
@@ -676,20 +680,37 @@ export default function AdminPage() {
         .admin-stat-c .v { font-size: 1.35rem; font-weight: 800; color: #0F172A; line-height: 1.05; word-break: break-word; }
         .admin-stat-c .l { margin-top: 4px; font-size: 0.7rem; color: #94A3B8; line-height: 1.25; }
 
-        /* ── Admin modals : feuille scrollable, en-tête fixe ── */
+        /* ── Liste candidats (style fiche) ── */
+        .acand-row { display: flex; align-items: stretch; padding: 0 !important; overflow: hidden; }
+        .acand-main { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; cursor: pointer; padding: 12px 14px; }
+        .acand-photo { width: 58px; height: 64px; border-radius: 12px; overflow: hidden; background: #EFF6FF; position: relative; flex-shrink: 0; }
+        .acand-info { flex: 1; min-width: 0; }
+        .acand-top { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+        .acand-rank { background: #2563EB; color: #fff; font-size: 0.7rem; font-weight: 800; padding: 2px 10px; border-radius: 100px; letter-spacing: 0.02em; }
+        .acand-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .acand-name { font-weight: 800; color: #0F172A; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .acand-sub { font-size: 0.74rem; color: #94A3B8; margin-top: 1px; }
+        .acand-votes { display: flex; align-items: center; gap: 5px; margin-top: 7px; font-size: 0.8rem; font-weight: 800; color: #B45309; }
+        .acand-actions { display: flex; flex-direction: column; border-left: 1px solid #EEF1F6; flex-shrink: 0; }
+        .acand-actions button { flex: 1; width: 50px; border: none; background: #fff; cursor: pointer; display: grid; place-items: center; border-bottom: 1px solid #EEF1F6; transition: background 0.15s; }
+        .acand-actions button:last-child { border-bottom: none; }
+        .acand-actions button:hover { background: #F8FAFF; }
+
+        /* ── Admin modals : flottant au centre, scrollable ── */
         .amodal-backdrop {
           position: fixed; inset: 0; z-index: 300;
-          background: rgba(15,23,42,0.5); backdrop-filter: blur(4px);
-          display: flex; align-items: flex-end; justify-content: center;
+          background: rgba(15,23,42,0.55); backdrop-filter: blur(4px);
+          display: flex; align-items: center; justify-content: center; padding: 16px;
         }
         .amodal {
           width: 100%; max-width: 460px; background: #fff;
-          border-radius: 22px 22px 0 0;
+          border-radius: 20px;
           display: flex; flex-direction: column;
           max-height: 90vh; max-height: 90dvh; overflow: hidden;
-          animation: slide-up 0.28s ease;
-          box-shadow: 0 -12px 40px rgba(0,0,0,0.18);
+          animation: modal-pop 0.22s ease;
+          box-shadow: 0 24px 60px rgba(0,0,0,0.28);
         }
+        @keyframes modal-pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .amodal-head {
           flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
           gap: 12px; padding: 15px 18px; border-bottom: 1px solid #EEF1F6; background: #fff;

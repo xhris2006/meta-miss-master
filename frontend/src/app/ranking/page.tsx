@@ -65,8 +65,10 @@ export default function RankingPage() {
   }, []);
 
   const current = miss;
-  const total = current.reduce((sum, c) => sum + c.totalVotes, 0) || 1;
+  const realTotal = current.reduce((sum, c) => sum + (c.totalVotes || 0), 0);
+  const total = realTotal || 1;
   const pct = (v: number) => Math.round((v / total) * 100);
+  const totalDisplay = realTotal >= 1000 ? `${(realTotal / 1000).toFixed(1)}K` : String(realTotal);
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -573,61 +575,88 @@ export default function RankingPage() {
         <span className="rk-edition-badge">Édition 2026</span>
       </div>
 
-      {/* ── TABLE ── */}
-      <div className="rk-table-card">
-        {/* Table header */}
-        <div className="rk-table-head">
-          <div className="rk-th">#</div>
-          <div className="rk-th">Candidate</div>
-          <div className="rk-th right">Score</div>
+      {/* ── LIVE banner ── */}
+      <div className="rk-live2">
+        <div className="rk-live2-ic">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>
         </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="rk-live2-t">Résultats en temps réel</div>
+          <div className="rk-live2-s">Mis à jour automatiquement</div>
+        </div>
+        <span className={`rk-live2-badge${live ? " on" : ""}`}><i />{live ? "LIVE" : "..."}</span>
+      </div>
+
+      {/* Total des votes */}
+      <div className="rk-total">
+        <span className="rk-total-l">Total des votes</span>
+        <span className="rk-total-v">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
+          {totalDisplay}
+        </span>
+      </div>
+
+      {/* ── CANDIDATE CARDS ── */}
+      <div className="rk-clist">
+        <style>{`
+          .rk-live2 { display: flex; align-items: center; gap: 12px; margin: 0 16px 14px; padding: 14px 16px; border-radius: 18px; background: linear-gradient(135deg, #0B1F4D, #1D4ED8); box-shadow: 0 10px 28px rgba(11,31,77,0.32); }
+          .rk-live2-ic { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.16); display: grid; place-items: center; flex-shrink: 0; }
+          .rk-live2-t { font-size: 0.92rem; font-weight: 800; color: #fff; }
+          .rk-live2-s { font-size: 0.72rem; color: rgba(255,255,255,0.7); margin-top: 1px; }
+          .rk-live2-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; font-weight: 800; color: #fff; background: rgba(255,255,255,0.15); padding: 6px 11px; border-radius: 100px; }
+          .rk-live2-badge i { width: 7px; height: 7px; border-radius: 50%; background: #9CA3AF; }
+          .rk-live2-badge.on i { background: #34D399; box-shadow: 0 0 0 3px rgba(52,211,153,0.3); animation: rk-pulse 1.5s infinite; }
+          @keyframes rk-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+          .rk-total { display: flex; align-items: center; justify-content: space-between; margin: 0 16px 14px; padding: 0 2px; }
+          .rk-total-l { font-size: 0.82rem; color: var(--text-muted); font-weight: 600; }
+          .rk-total-v { display: inline-flex; align-items: center; gap: 6px; font-size: 1rem; font-weight: 800; color: var(--text); }
+          .rk-clist { display: grid; gap: 12px; padding: 0 16px; }
+          @media (min-width: 720px) { .rk-clist { grid-template-columns: 1fr 1fr; } .rk-ccard.top { grid-column: 1 / -1; } }
+          .rk-ccard { background: var(--bg-white); border: 1.5px solid var(--border); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); }
+          .rk-ccard.top { background: linear-gradient(140deg, #0B1F4D 0%, #15347E 60%, #1D4ED8 100%); border-color: transparent; box-shadow: 0 14px 36px rgba(11,31,77,0.4); }
+          .rk-ccard-row { display: flex; align-items: center; gap: 12px; }
+          .rk-cmedal { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 0.82rem; font-weight: 800; color: #fff; flex-shrink: 0; }
+          .rk-cavatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.5); }
+          .rk-ccard.top .rk-cavatar { border-color: rgba(255,255,255,0.5); width: 56px; height: 56px; }
+          .rk-cmeta { flex: 1; min-width: 0; text-decoration: none; }
+          .rk-cname { font-size: 0.95rem; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .rk-ccard.top .rk-cname { color: #fff; font-size: 1.05rem; }
+          .rk-ccity { font-size: 0.72rem; color: var(--text-muted); margin: 1px 0 7px; }
+          .rk-ccard.top .rk-ccity { color: rgba(255,255,255,0.7); }
+          .rk-cbar { height: 6px; border-radius: 100px; background: var(--blue-mid); overflow: hidden; }
+          .rk-ccard.top .rk-cbar { background: rgba(255,255,255,0.2); }
+          .rk-cbar-fill { height: 100%; border-radius: 100px; background: var(--blue); }
+          .rk-ccard.top .rk-cbar-fill { background: #fff; }
+          .rk-cpct { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); margin-top: 4px; }
+          .rk-ccard.top .rk-cpct { color: rgba(255,255,255,0.8); }
+          .rk-cvotes { text-align: right; flex-shrink: 0; }
+          .rk-cvotes-n { font-size: 1.05rem; font-weight: 900; color: var(--blue); line-height: 1; }
+          .rk-ccard.top .rk-cvotes-n { color: #fff; }
+          .rk-cvotes-l { font-size: 0.62rem; color: var(--text-muted); }
+          .rk-ccard.top .rk-cvotes-l { color: rgba(255,255,255,0.7); }
+          .rk-cactions { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+          .rk-vote-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 11px; border-radius: 12px; background: var(--blue); color: #fff; font-size: 0.82rem; font-weight: 800; text-decoration: none; transition: background 0.15s; }
+          .rk-vote-btn:hover { background: var(--blue-hover); }
+          .rk-ccard.top .rk-vote-btn { background: #fff; color: var(--blue-dark); }
+          .rk-iconbtn { width: 40px; height: 40px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg-white); display: grid; place-items: center; cursor: pointer; flex-shrink: 0; transition: all 0.15s; }
+          .rk-iconbtn:hover { border-color: var(--blue); }
+          .rk-ccard.top .rk-iconbtn { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.12); }
+          .rk-wa { background: #25D366 !important; border-color: #25D366 !important; }
+        `}</style>
 
         {/* Loading skeletons */}
         {loading &&
-          [1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="rk-skel-row">
-              <div
-                className="shimmer"
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  flexShrink: 0,
-                }}
-              />
-              <div
-                className="shimmer"
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 10,
-                  flexShrink: 0,
-                }}
-              />
-              <div style={{ flex: 1 }}>
-                <div
-                  className="shimmer"
-                  style={{
-                    height: 13,
-                    borderRadius: 6,
-                    marginBottom: 6,
-                    maxWidth: 140,
-                  }}
-                />
-                <div
-                  className="shimmer"
-                  style={{ height: 4, borderRadius: 100, maxWidth: 100 }}
-                />
+          [1, 2, 3].map((i) => (
+            <div key={i} className="rk-ccard">
+              <div className="rk-ccard-row">
+                <div className="shimmer" style={{ width: 34, height: 34, borderRadius: "50%", flexShrink: 0 }} />
+                <div className="shimmer" style={{ width: 50, height: 50, borderRadius: "50%", flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div className="shimmer" style={{ height: 13, borderRadius: 6, marginBottom: 6, maxWidth: 140 }} />
+                  <div className="shimmer" style={{ height: 6, borderRadius: 100, maxWidth: 120 }} />
+                </div>
+                <div className="shimmer" style={{ width: 36, height: 20, borderRadius: 6 }} />
               </div>
-              <div
-                className="shimmer"
-                style={{
-                  width: 36,
-                  height: 20,
-                  borderRadius: 6,
-                  marginLeft: "auto",
-                }}
-              />
             </div>
           ))}
 
@@ -668,83 +697,51 @@ export default function RankingPage() {
           </div>
         )}
 
-        {/* Ranking rows */}
+        {/* Candidate cards */}
         {!loading &&
           current.map((c, i) => {
-            const photo = c.photoUrl?.startsWith("http")
-              ? c.photoUrl
-              : `${apiBase}${c.photoUrl}`;
+            const photo = c.photoUrl?.startsWith("http") ? c.photoUrl : `${apiBase}${c.photoUrl}`;
             const percent = pct(c.totalVotes);
-            const rankColor =
-              i === 0
-                ? "#F59E0B"
-                : i === 1
-                ? "#9CA3AF"
-                : i === 2
-                ? "#D97706"
-                : "var(--blue)";
-            const vDisplay =
-              c.totalVotes >= 1000
-                ? `${(c.totalVotes / 1000).toFixed(1)}K`
-                : String(c.totalVotes);
-
+            const medalColor = i === 0 ? "#F59E0B" : i === 1 ? "#9CA3AF" : i === 2 ? "#D97706" : "var(--blue)";
+            const vDisplay = c.totalVotes >= 1000 ? `${(c.totalVotes / 1000).toFixed(1)}K` : String(c.totalVotes);
+            const firstName = c.name.split(" ")[0];
             return (
-              <Link
-                key={c.id}
-                href={`/candidates/${c.id}`}
-                className="rk-row fade-up"
-                style={{ animationDelay: `${i * 0.06}s` }}
-              >
-                {/* Rank */}
-                <div>
-                  <div
-                    className="rk-rank"
-                    style={{ background: rankColor }}
-                  >
-                    {i + 1}
+              <div key={c.id} className={`rk-ccard fade-up${i === 0 ? " top" : ""}`} style={{ animationDelay: `${Math.min(i, 8) * 0.05}s` }}>
+                <div className="rk-ccard-row">
+                  <div className="rk-cmedal" style={{ background: medalColor }}>{i + 1}</div>
+                  <img className="rk-cavatar" src={photo} alt={c.name} onError={(e: any) => { if (!e.target.src.endsWith("/placeholder-avatar.svg")) e.target.src = "/placeholder-avatar.svg"; }} />
+                  <Link href={`/candidates/${c.id}`} className="rk-cmeta">
+                    <div className="rk-cname">{c.name}</div>
+                    <div className="rk-ccity">{c.city || "—"}</div>
+                    <div className="rk-cbar"><div className="rk-cbar-fill" style={{ width: `${percent}%` }} /></div>
+                    <div className="rk-cpct">{percent}%</div>
+                  </Link>
+                  <div className="rk-cvotes">
+                    <div className="rk-cvotes-n">{vDisplay}</div>
+                    <div className="rk-cvotes-l">votes</div>
                   </div>
                 </div>
-
-                {/* Candidate */}
-                <div className="rk-cand-cell">
-                  <img
-                    src={photo}
-                    alt={c.name}
-                    className="rk-cand-photo"
-                    onError={(e: any) => {
-                      e.target.src = "/placeholder-avatar.svg";
-                      e.target.onerror = null;
-                    }}
-                  />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="rk-cand-name">{c.name}</div>
-                    <div className="rk-progress">
-                      <div
-                        className="rk-progress-fill"
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
+                <div className="rk-cactions">
+                  <Link href={`/vote/${c.id}`} className="rk-vote-btn">
+                    Voter pour {firstName}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                  </Link>
+                  <button className="rk-iconbtn" aria-label="Partager" onClick={async () => {
+                    const url = `${window.location.origin}/candidates/${c.id}`;
+                    try { if (navigator.share) await navigator.share({ title: c.name, url }); else { await navigator.clipboard.writeText(url); toast.success("Lien copié !"); } } catch { /* annulé */ }
+                  }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={i === 0 ? "#fff" : "var(--text-2)"} strokeWidth="2"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>
+                  </button>
+                  <button className="rk-iconbtn rk-wa" aria-label="WhatsApp" onClick={() => {
+                    const url = `${window.location.origin}/candidates/${c.id}`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(`Votez pour ${c.name} sur Meta Miss Master ! ${url}`)}`, "_blank");
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" /></svg>
+                  </button>
                 </div>
-
-                {/* Score : pourcentage (gros) + votes (petit) */}
-                <div className="rk-score">
-                  <div className="rk-score-pct">{percent}%</div>
-                  <div className="rk-score-votes">{vDisplay} votes</div>
-                </div>
-              </Link>
+              </div>
             );
           })}
-      </div>
-
-      {/* ── LIVE INDICATOR ── */}
-      <div className="rk-live-row">
-        <div className={`rk-live-dot${live ? " on" : ""}`} />
-        <span>
-          {live
-            ? "Résultats mis à jour en temps réel"
-            : "Connexion en cours..."}
-        </span>
       </div>
 
       {/* ══════════════════════════════════════
