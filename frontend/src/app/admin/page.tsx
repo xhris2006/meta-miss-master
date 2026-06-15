@@ -260,14 +260,14 @@ export default function AdminPage() {
 
           {/* ── OVERVIEW ── */}
           {tab === "overview" && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 16 }}>
+            <div className="admin-stats">
               {statCards.map(card => (
-                <div key={card.label} style={{ ...S.card, padding: 22 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 14, background: card.color + "18", display: "grid", placeItems: "center", marginBottom: 16 }}>
-                    <card.Icon size={22} color={card.color} />
+                <div key={card.label} className="admin-stat-c" style={{ ...S.card }}>
+                  <div className="ic" style={{ background: card.color + "18" }}>
+                    <card.Icon size={17} color={card.color} />
                   </div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: "#0F172A" }}>{card.val}</div>
-                  <div style={{ marginTop: 6, fontSize: 13, color: "#94A3B8" }}>{card.label}</div>
+                  <div className="v">{card.val}</div>
+                  <div className="l">{card.label}</div>
                 </div>
               ))}
             </div>
@@ -464,12 +464,13 @@ export default function AdminPage() {
 
       {/* ── MODAL VOIR CANDIDAT ── */}
       {viewingCandidate && (
-        <div className="modal-backdrop" onClick={() => setViewingCandidate(null)}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: "90vh", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800 }}>Fiche candidat</h3>
-              <button onClick={() => setViewingCandidate(null)} style={{ border: "none", background: "#F1F5F9", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: "1.1rem", display: "grid", placeItems: "center", color: "#64748B" }}>×</button>
+        <div className="amodal-backdrop" onClick={() => setViewingCandidate(null)}>
+          <div className="amodal" onClick={e => e.stopPropagation()}>
+            <div className="amodal-head">
+              <h3>Fiche candidat</h3>
+              <button className="amodal-close" onClick={() => setViewingCandidate(null)}>×</button>
             </div>
+            <div className="amodal-body">
             <div style={{ width: "100%", height: 180, borderRadius: 14, overflow: "hidden", background: "#EFF6FF", marginBottom: 16, position: "relative" }}>
               <Image src={viewingCandidate.photoUrl?.startsWith("http") ? viewingCandidate.photoUrl : `${apiBase}${viewingCandidate.photoUrl}`} alt={viewingCandidate.name} fill style={{ objectFit: "cover" }} onError={(e:any)=>{e.target.style.display="none";}} />
             </div>
@@ -499,21 +500,23 @@ export default function AdminPage() {
                 <button style={{ flex: 1, fontSize: "0.82rem", background: "#10B981", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { approve(viewingCandidate.id); setViewingCandidate(null); }}>✓ Approuver</button>
               )}
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* ── MODAL EDIT/CREATE CANDIDAT ── */}
       {editingCandidate !== null && (
-        <div className="modal-backdrop" onClick={() => setEditingCandidate(null)}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: "92vh", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div className="amodal-backdrop" onClick={() => setEditingCandidate(null)}>
+          <div className="amodal" onClick={e => e.stopPropagation()}>
+            <div className="amodal-head">
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>{isCreating ? "Ajouter un candidat" : "Modifier la candidature"}</h3>
-                {!isCreating && <p style={{ margin: "4px 0 0", color: "#94A3B8", fontSize: "0.78rem" }}>ID {editingCandidate.id}</p>}
+                <h3>{isCreating ? "Ajouter un candidat" : "Modifier la candidature"}</h3>
+                {!isCreating && <p className="sub">ID {editingCandidate.id}</p>}
               </div>
-              <button onClick={() => setEditingCandidate(null)} style={{ border: "none", background: "#F1F5F9", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: "1.1rem", display: "grid", placeItems: "center", color: "#64748B" }}>×</button>
+              <button className="amodal-close" onClick={() => setEditingCandidate(null)}>×</button>
             </div>
+            <div className="amodal-body">
 
             {/* Photo */}
             <input ref={photoInputRef} type="file" accept="image/*" onChange={e => { const f=e.target.files?.[0]; if(f){setPhotoFile(f);setPhotoPreview(URL.createObjectURL(f));} }} style={{ display: "none" }} />
@@ -570,21 +573,23 @@ export default function AdminPage() {
                 {saving ? "Enregistrement..." : isCreating ? "✓ Créer le candidat" : "✓ Enregistrer les modifications"}
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* ── MODAL EDIT USER ── */}
       {editingUser && (
-        <div className="modal-backdrop" onClick={() => setEditingUser(null)}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div className="amodal-backdrop" onClick={() => setEditingUser(null)}>
+          <div className="amodal" onClick={e => e.stopPropagation()}>
+            <div className="amodal-head">
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>Modifier l'utilisateur</h3>
-                <p style={{ margin: "4px 0 0", color: "#94A3B8", fontSize: "0.78rem" }}>{editingUser.email}</p>
+                <h3>Modifier l'utilisateur</h3>
+                <p className="sub">{editingUser.email}</p>
               </div>
-              <button onClick={() => setEditingUser(null)} style={{ border: "none", background: "#F1F5F9", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: "1.1rem", display: "grid", placeItems: "center", color: "#64748B" }}>×</button>
+              <button className="amodal-close" onClick={() => setEditingUser(null)}>×</button>
             </div>
+            <div className="amodal-body">
             <div style={{ display: "grid", gap: 14 }}>
               <div><label style={S.lbl}>Nom</label><input value={editUserValues.name} onChange={e => setEditUserValues({...editUserValues,name:e.target.value})} style={S.inp} /></div>
               <div><label style={S.lbl}>Email</label><input type="email" value={editUserValues.email} onChange={e => setEditUserValues({...editUserValues,email:e.target.value})} style={S.inp} /></div>
@@ -599,18 +604,20 @@ export default function AdminPage() {
                 {editUserSaving ? "Enregistrement..." : "✓ Enregistrer"}
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* ── MODAL EDIT CONCOURS ── */}
       {editingContest && (
-        <div className="modal-backdrop" onClick={() => setEditingContest(null)}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>Modifier le concours</h3>
-              <button onClick={() => setEditingContest(null)} style={{ border: "none", background: "#F1F5F9", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: "1.1rem", display: "grid", placeItems: "center", color: "#64748B" }}>×</button>
+        <div className="amodal-backdrop" onClick={() => setEditingContest(null)}>
+          <div className="amodal" onClick={e => e.stopPropagation()}>
+            <div className="amodal-head">
+              <h3>Modifier le concours</h3>
+              <button className="amodal-close" onClick={() => setEditingContest(null)}>×</button>
             </div>
+            <div className="amodal-body">
             <div style={{ display: "grid", gap: 14 }}>
               <div><label style={S.lbl}>Nom du concours</label><input value={editContestValues.name} onChange={e => setEditContestValues({...editContestValues,name:e.target.value})} style={S.inp} /></div>
               <div><label style={S.lbl}>Date de début</label><input type="date" value={editContestValues.startDate} onChange={e => setEditContestValues({...editContestValues,startDate:e.target.value})} style={S.inp} /></div>
@@ -623,18 +630,20 @@ export default function AdminPage() {
                 {editContestSaving ? "Enregistrement..." : "✓ Enregistrer"}
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* ── MODAL CRÉER CONCOURS ── */}
       {showCreateContest && (
-        <div className="modal-backdrop" onClick={() => setShowCreateContest(false)}>
-          <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>Nouveau concours</h3>
-              <button onClick={() => setShowCreateContest(false)} style={{ border: "none", background: "#F1F5F9", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: "1.1rem", display: "grid", placeItems: "center", color: "#64748B" }}>×</button>
+        <div className="amodal-backdrop" onClick={() => setShowCreateContest(false)}>
+          <div className="amodal" onClick={e => e.stopPropagation()}>
+            <div className="amodal-head">
+              <h3>Nouveau concours</h3>
+              <button className="amodal-close" onClick={() => setShowCreateContest(false)}>×</button>
             </div>
+            <div className="amodal-body">
             <div style={{ display: "grid", gap: 14 }}>
               <div><label style={S.lbl}>Nom *</label><input value={newContest.name} onChange={e => setNewContest({...newContest,name:e.target.value})} placeholder="Ex: MetaMiss 2026" style={S.inp} /></div>
               <div><label style={S.lbl}>Date de début *</label><input type="date" value={newContest.startDate} onChange={e => setNewContest({...newContest,startDate:e.target.value})} style={S.inp} /></div>
@@ -643,6 +652,7 @@ export default function AdminPage() {
               <button disabled={contestSaving||!newContest.name||!newContest.startDate} onClick={async () => { if (!newContest.name||!newContest.startDate) { toast.error("Nom et date requis"); return; } setContestSaving(true); try { await api.post("/admin/contest", { name: newContest.name, startDate: newContest.startDate, ...(newContest.endDate&&{endDate:newContest.endDate}) }); toast.success("Concours créé ✓"); setShowCreateContest(false); setNewContest({name:"",startDate:"",endDate:""}); load(); } catch(err:any) { toast.error(err?.response?.data?.message||"Erreur"); } setContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: (!newContest.name||!newContest.startDate)?0.5:1, fontFamily: "inherit" }}>
                 {contestSaving ? "Création..." : "✓ Créer le concours"}
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -656,6 +666,50 @@ export default function AdminPage() {
           .admin-main-content { margin-left: 260px; }
         }
         .admin-input { width:100%;padding:12px 14px;border:1.5px solid #E2E8F0;border-radius:12px;font-size:14px;outline:none;font-family:inherit;background:#F8FAFF;color:#0F172A;box-sizing:border-box; }
+
+        /* ── Cartes stats compactes ── */
+        .admin-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        @media (min-width: 560px) { .admin-stats { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
+        @media (min-width: 1100px) { .admin-stats { grid-template-columns: repeat(6, 1fr); } }
+        .admin-stat-c { padding: 14px; border-radius: 16px !important; }
+        .admin-stat-c .ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 10px; }
+        .admin-stat-c .v { font-size: 1.35rem; font-weight: 800; color: #0F172A; line-height: 1.05; word-break: break-word; }
+        .admin-stat-c .l { margin-top: 4px; font-size: 0.7rem; color: #94A3B8; line-height: 1.25; }
+
+        /* ── Admin modals : feuille scrollable, en-tête fixe ── */
+        .amodal-backdrop {
+          position: fixed; inset: 0; z-index: 300;
+          background: rgba(15,23,42,0.5); backdrop-filter: blur(4px);
+          display: flex; align-items: flex-end; justify-content: center;
+        }
+        .amodal {
+          width: 100%; max-width: 460px; background: #fff;
+          border-radius: 22px 22px 0 0;
+          display: flex; flex-direction: column;
+          max-height: 90vh; max-height: 90dvh; overflow: hidden;
+          animation: slide-up 0.28s ease;
+          box-shadow: 0 -12px 40px rgba(0,0,0,0.18);
+        }
+        .amodal-head {
+          flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+          gap: 12px; padding: 15px 18px; border-bottom: 1px solid #EEF1F6; background: #fff;
+        }
+        .amodal-head h3 { margin: 0; font-size: 1rem; font-weight: 800; color: #0F172A; }
+        .amodal-head .sub { margin: 2px 0 0; color: #94A3B8; font-size: 0.74rem; word-break: break-all; }
+        .amodal-close {
+          flex-shrink: 0; border: none; background: #F1F5F9; border-radius: 9px;
+          width: 32px; height: 32px; cursor: pointer; font-size: 1.25rem; line-height: 1;
+          display: grid; place-items: center; color: #64748B;
+        }
+        .amodal-close:hover { background: #E2E8F0; }
+        .amodal-body {
+          overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+          padding: 16px 18px 20px; flex: 1; min-height: 0;
+        }
+        @media (min-width: 640px) {
+          .amodal-backdrop { align-items: center; padding: 20px; }
+          .amodal { border-radius: 18px; max-height: 88vh; box-shadow: 0 20px 60px rgba(0,0,0,0.22); }
+        }
       `}</style>
     </div>
   );
