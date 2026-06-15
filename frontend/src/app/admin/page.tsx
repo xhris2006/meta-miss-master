@@ -117,7 +117,16 @@ export default function AdminPage() {
     setSaving(true);
     try {
       const fd = new FormData();
-      Object.entries(editValues).forEach(([k, v]) => { if (v) fd.append(k, v); });
+      // Création : on n'envoie que les champs remplis.
+      // Édition : on envoie TOUS les champs (même vides) pour que vider une
+      // valeur (Instagram, TikTok, etc.) la supprime côté serveur.
+      Object.entries(editValues).forEach(([k, v]) => {
+        if (isCreating) {
+          if (v) fd.append(k, v);
+        } else {
+          fd.append(k, v ?? "");
+        }
+      });
       if (photoFile) fd.append("photo", photoFile);
       if (isCreating) { await api.post("/admin/candidates", fd, { headers: { "Content-Type": "multipart/form-data" } }); toast.success("Candidat ajouté ✓"); }
       else { await api.patch(`/admin/candidates/${editingCandidate.id}`, fd, { headers: { "Content-Type": "multipart/form-data" } }); toast.success("Mis à jour ✓"); }
