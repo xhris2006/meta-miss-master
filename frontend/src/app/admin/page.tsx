@@ -26,7 +26,7 @@ const S = {
 };
 
 export default function AdminPage() {
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, logout, hasHydrated } = useAuthStore();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
   const [stats, setStats] = useState<any>(null);
@@ -66,9 +66,10 @@ export default function AdminPage() {
   const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
 
   useEffect(() => {
+    if (!hasHydrated) return; // attendre la relecture de la session avant de décider
     if (!isAuthenticated || user?.role !== "ADMIN") { router.push("/xhrisadmin"); return; }
     load();
-  }, [isAuthenticated]);
+  }, [hasHydrated, isAuthenticated]);
 
   const load = async () => {
     setLoading(true);

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,7 +21,17 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) });
+
+  // Session déjà active → aller directement au panneau admin (pas de re-login)
+  useEffect(() => {
+    if (hasHydrated && isAuthenticated && user?.role === "ADMIN") {
+      router.replace("/admin");
+    }
+  }, [hasHydrated, isAuthenticated, user, router]);
 
   const onSubmit = async (values: FormData) => {
     setLoading(true);
