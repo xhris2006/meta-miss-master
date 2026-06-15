@@ -60,7 +60,9 @@
 
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+/* Échelle globale réduite : tout le texte/espacement en rem rétrécit ~9% */
+html { scroll-behavior: smooth; font-size: 14.5px; }
+@media (min-width: 768px) { html { font-size: 15px; } }
 
 body {
   font-family: var(--font);

@@ -567,12 +567,12 @@ export default function RankingPage() {
       {/* ── HEADER ── */}
       <div className="rk-header">
         <div className="rk-header-left">
-          <h1>Résultats en direct</h1>
+          <h1>{t.resultsLive || "Résultats en direct"}</h1>
           <div className="rk-header-sub">
-            Classement des candidates
+            {t.rankingSub || "Classement des candidates"}
           </div>
         </div>
-        <span className="rk-edition-badge">Édition 2026</span>
+        <span className="rk-edition-badge">{t.edition || "Édition 2026"}</span>
       </div>
 
       {/* ── LIVE banner ── */}
@@ -581,15 +581,15 @@ export default function RankingPage() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="rk-live2-t">Résultats en temps réel</div>
-          <div className="rk-live2-s">Mis à jour automatiquement</div>
+          <div className="rk-live2-t">{t.liveResults || "Résultats en temps réel"}</div>
+          <div className="rk-live2-s">{t.autoUpdated || "Mis à jour automatiquement"}</div>
         </div>
         <span className={`rk-live2-badge${live ? " on" : ""}`}><i />{live ? "LIVE" : "..."}</span>
       </div>
 
       {/* Total des votes */}
       <div className="rk-total">
-        <span className="rk-total-l">Total des votes</span>
+        <span className="rk-total-l">{t.totalVotesTitle || "Total des votes"}</span>
         <span className="rk-total-v">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
           {totalDisplay}
@@ -723,7 +723,7 @@ export default function RankingPage() {
                 </div>
                 <div className="rk-cactions">
                   <Link href={`/vote/${c.id}`} className="rk-vote-btn">
-                    Voter pour {firstName}
+                    {t.voteFor || "Voter pour"} {firstName}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                   </Link>
                   <button className="rk-iconbtn" aria-label="Partager" onClick={async () => {

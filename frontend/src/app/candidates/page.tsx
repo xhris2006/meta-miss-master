@@ -136,8 +136,8 @@ export default function CandidatesPage() {
             <path d="M2 19h20v2H2v-2zm18-9l-3 9H7L4 10l4 3 4-6 4 6 4-3z" />
           </svg>
         </div>
-        <h1>Nos Candidats</h1>
-        <p>Découvrez, soutenez et faites briller vos favoris</p>
+        <h1>{t.candTitle || "Nos Candidates"}</h1>
+        <p>{t.candSubtitle || "Découvrez, soutenez et faites briller vos favorites"}</p>
       </div>
 
       {/* Search */}
@@ -210,14 +210,14 @@ export default function CandidatesPage() {
                   </div>
                 </div>
                 <div className="cand-card-foot">
-                  <span className="pos">Position #{rank}</span>
+                  <span className="pos">{t.position || "Position"} #{rank}</span>
                   <span className="v">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" /></svg>
                     {vDisplay}
                   </span>
                 </div>
                 <div className="cand-card-cta">
-                  Voir le profil
+                  {t.seeProfile || "Voir le profil"}
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg>
                 </div>
               </Link>
