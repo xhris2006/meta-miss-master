@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import ThemeProvider from "@/components/layout/ThemeProvider";
-import BottomNav from "@/components/layout/BottomNav";
+import AppShell from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
   title: "MetaMiss Master 2026",
@@ -35,15 +35,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="fr" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          {/* Wrapper centré visible sur desktop */}
-          <div className="app-wrapper">
-            {/* Sidebar sur tablet+, bottom nav sur mobile */}
-            <BottomNav />
-            {/* Contenu des pages */}
-            <main className="app-main">
-              {children}
-            </main>
-          </div>
+          {/* App shell (nav) pour le public ; l'admin s'affiche plein écran */}
+          <AppShell>{children}</AppShell>
           <Toaster position="top-center" toastOptions={{
             style: {
               fontFamily: "'Plus Jakarta Sans', sans-serif",
