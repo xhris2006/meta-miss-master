@@ -19,7 +19,7 @@ const schema = z.object({
   instagram: z.string().optional(),
   tiktok: z.string().optional(),
   snap: z.string().optional(),
-  whatsappFan: z.string().optional(),
+  whatsappFan: z.string().min(6, "Numéro WhatsApp obligatoire"),
   phone: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
@@ -291,14 +291,21 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* ── Section 5 : Réseaux sociaux ── */}
+          {/* ── Section 5 : Contact & Réseaux sociaux ── */}
           <div style={section}>
-            <div style={sectionTitle}><span>📱</span> Réseaux sociaux</div>
+            <div style={sectionTitle}><span>📱</span> Contact & Réseaux sociaux</div>
+
+            {/* Numéro WhatsApp — OBLIGATOIRE */}
+            <div style={field}>
+              <label style={lbl}>💬 Numéro WhatsApp *</label>
+              <input {...register("whatsappFan")} style={{ ...inp, ...(errors.whatsappFan ? { borderColor: "#EF4444" } : {}) }} placeholder="+237 6XX XXX XXX" inputMode="tel" />
+              {errors.whatsappFan && <p style={errStyle}>{errors.whatsappFan.message as string}</p>}
+            </div>
+
             {[
               { key: "instagram", label: "Instagram", placeholder: "@votre_pseudo", icon: "📸" },
               { key: "tiktok", label: "TikTok", placeholder: "@votre_pseudo", icon: "🎵" },
               { key: "snap", label: "Snapchat", placeholder: "votre_pseudo", icon: "👻" },
-              { key: "whatsappFan", label: "Lien groupe WhatsApp fan", placeholder: "https://chat.whatsapp.com/...", icon: "💬" },
             ].map(s => (
               <div key={s.key} style={field}>
                 <label style={lbl}>{s.icon} {s.label} <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optionnel)</span></label>

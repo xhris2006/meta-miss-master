@@ -75,6 +75,14 @@ export default function LandingPage() {
         }
         .lp-feat-t { font-size: 0.76rem; font-weight: 800; color: var(--text); margin-bottom: 3px; }
         .lp-feat-d { font-size: 0.62rem; color: var(--text-muted); line-height: 1.35; }
+
+        .lp-candidacy {
+          display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+          margin-top: 14px; padding: 13px; border-radius: 14px;
+          background: var(--bg-white); border: 1.5px solid var(--blue-mid); color: var(--blue);
+          font-size: 0.84rem; font-weight: 800; text-decoration: none; transition: all 0.15s;
+        }
+        .lp-candidacy:hover { background: var(--blue-light); border-color: var(--blue); }
       `}</style>
 
       <div className="lp">
@@ -149,6 +157,14 @@ export default function LandingPage() {
             <div className="lp-feat-d">{t.featEverywhereD}</div>
           </div>
         </div>
+
+        {/* Devenir candidate */}
+        <Link href="/candidates/register" className="lp-candidacy">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" />
+          </svg>
+          {t.becomeCandidate || "Devenir candidate"}
+        </Link>
       </div>
     </div>
   );

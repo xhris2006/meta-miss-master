@@ -60,9 +60,7 @@
 
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-/* Échelle globale réduite : tout le texte/espacement en rem rétrécit ~9% */
-html { scroll-behavior: smooth; font-size: 14.5px; }
-@media (min-width: 768px) { html { font-size: 15px; } }
+html { scroll-behavior: smooth; font-size: 15px; }
 
 body {
   font-family: var(--font);
@@ -71,6 +69,12 @@ body {
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   overflow-x: hidden;
+  /* Échelle globale réduite : tout (texte, div, images) rétrécit ~16% */
+  zoom: 0.84;
+}
+/* Firefox (zoom récent) : repli via transform si zoom ignoré */
+@supports not (zoom: 1) {
+  body { transform: scale(0.84); transform-origin: top center; width: 119.05%; margin-left: -9.52%; }
 }
 
 /* ════════════════════════════════════════════

@@ -183,19 +183,19 @@ export default function VoteByIdPage() {
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
         </svg>
       </div>
-      <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: C.text, marginBottom: 10 }}>Vote enregistré ✓</h2>
+      <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: C.text, marginBottom: 10 }}>{t.cooldownTitle || "Vote enregistré ✓"}</h2>
       <p style={{ fontSize: "0.88rem", color: C.muted, lineHeight: 1.7, marginBottom: 10, maxWidth: 280 }}>
-        Merci pour votre soutien ! Vous pourrez voter à nouveau dans :
+        {t.cooldownDesc || "Merci pour votre soutien ! Vous pourrez voter à nouveau dans :"}
       </p>
       <div style={{ fontSize: "2.4rem", fontWeight: 900, color: C.blue, marginBottom: 8, fontVariantNumeric: "tabular-nums" }}>
         {formatCooldown(cooldownLeft)}
       </div>
       <p style={{ fontSize: "0.78rem", color: C.muted, marginBottom: 32 }}>
-        ⏱ Veuillez patienter 30 secondes avant de voter à nouveau
+        {t.cooldownWait || "⏱ Veuillez patienter 30 secondes avant de voter à nouveau"}
       </p>
       <div style={{ display: "flex", gap: 10, width: "100%", maxWidth: 340 }}>
         <a href="/ranking" className="btn-blue" style={{ flex: 1 }}>{t.seeResults}</a>
-        <a href="/candidates" className="btn-outline" style={{ flex: 1 }}>Autres candidats</a>
+        <a href="/candidates" className="btn-outline" style={{ flex: 1 }}>{t.otherCandidates || "Autres candidats"}</a>
       </div>
       <div className="security-badge" style={{ marginTop: 24 }}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -232,7 +232,7 @@ export default function VoteByIdPage() {
           </div>
         </div>
         <div style={{ background: C.blueBg, border: `1px solid ${C.blueBorder}`, borderRadius: 10, padding: "12px 16px", marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "0.82rem", color: C.muted }}>{votes} vote{votes > 1 ? "s" : ""}</span>
+          <span style={{ fontSize: "0.82rem", color: C.muted }}>{votes} {t.voteWord || "vote"}{votes > 1 ? "s" : ""}</span>
           <span style={{ fontSize: "0.9rem", fontWeight: 700, color: C.blue }}>{amount.toLocaleString("fr-FR")} FCFA</span>
         </div>
         <button onClick={handleConfirm} disabled={loading} className="btn-blue" style={{ marginBottom: 10 }}>
@@ -257,7 +257,7 @@ export default function VoteByIdPage() {
       <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: C.text, marginBottom: 10 }}>{t.thankYou}</h2>
       <p style={{ fontSize: "0.88rem", color: C.muted, lineHeight: 1.7, marginBottom: 16, maxWidth: 260 }}>{t.voteSuccess}</p>
       <p style={{ fontSize: "0.82rem", color: C.blue, fontWeight: 600, marginBottom: 32 }}>
-        ⏱ Veuillez patienter 30 secondes avant de voter à nouveau
+        {t.cooldownWait || "⏱ Veuillez patienter 30 secondes avant de voter à nouveau"}
       </p>
       <div style={{ display: "flex", gap: 10, width: "100%", maxWidth: 340 }}>
         <a href="/ranking" className="btn-blue" style={{ flex: 1 }}>{t.seeResults}</a>
@@ -321,16 +321,16 @@ export default function VoteByIdPage() {
             setAmount(rounded);
             setCustomAmount(String(rounded));
           }}
-          placeholder="Montant libre (multiple de 100 FCFA)"
+          placeholder={t.amountFree || "Montant libre (multiple de 100 FCFA)"}
           style={{ ...inputStyle, marginBottom: 4 }}
         />
         <p style={{ fontSize: "0.72rem", color: C.muted, marginBottom: 14 }}>
-          Montant minimum 100 FCFA · doit être un multiple de 100
+          {t.amountMin || "Montant minimum 100 FCFA · doit être un multiple de 100"}
         </p>
 
         {/* Summary */}
         <div style={{ background: C.blueBg, border: `1px solid ${C.blueBorder}`, borderRadius: 10, padding: "12px 14px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "0.82rem", color: C.muted }}>{votes} vote{votes > 1 ? "s" : ""}</span>
+          <span style={{ fontSize: "0.82rem", color: C.muted }}>{votes} {t.voteWord || "vote"}{votes > 1 ? "s" : ""}</span>
           <span style={{ fontSize: "0.9rem", fontWeight: 700, color: C.blue }}>{amount.toLocaleString("fr-FR")} FCFA</span>
         </div>
 
@@ -355,9 +355,9 @@ export default function VoteByIdPage() {
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: "0.9rem", fontWeight: 700, color: selected ? C.blue : C.text }}>{m.label}</div>
-                    <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 1 }}>{m.sub}</div>
+                    <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 1 }}>{m.id === "geniuspay" ? (t.payIntl || m.sub) : (t.payMobile || m.sub)}</div>
                     <div style={{ marginTop: 5, display: "inline-block", fontSize: "0.66rem", fontWeight: 700, color: m.badgeColor, background: `${m.badgeColor}18`, border: `1px solid ${m.badgeColor}33`, borderRadius: 20, padding: "2px 8px" }}>
-                      {m.badge}
+                      {m.id === "geniuspay" ? (t.worldwide || m.badge) : (t.recommended || m.badge)}
                     </div>
                   </div>
                 </div>
@@ -372,11 +372,11 @@ export default function VoteByIdPage() {
         {/* Genius Pay : sélection du pays (disponible partout dans le monde) */}
         {method === "geniuspay" && (
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: "0.75rem", fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Pays</div>
+            <div style={{ fontSize: "0.75rem", fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{t.country || "Pays"}</div>
             <select value={country} onChange={e => setCountry(e.target.value)} style={{ ...inputStyle, appearance: "none", MozAppearance: "none", WebkitAppearance: "none" }}>
               {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
             </select>
-            <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 10 }}>Genius Pay choisit automatiquement le meilleur moyen de paiement disponible dans votre pays — partout dans le monde.</div>
+            <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 10 }}>{t.geniusNote || "Genius Pay choisit automatiquement le meilleur moyen de paiement disponible dans votre pays — partout dans le monde."}</div>
           </div>
         )}
 
@@ -385,7 +385,7 @@ export default function VoteByIdPage() {
           disabled={!voterName.trim() || !voterEmail.trim() || amount < 100}
           onClick={() => {
             if (!voterName.trim() || !voterEmail.trim()) { toast.error(t.error); return; }
-            if (amount < 100 || amount % 100 !== 0) { toast.error("Le montant doit être un multiple de 100 FCFA"); return; }
+            if (amount < 100 || amount % 100 !== 0) { toast.error(t.amountMultipleError || "Le montant doit être un multiple de 100 FCFA"); return; }
             setStep("confirm");
           }}
           style={{ opacity: (!voterName.trim() || !voterEmail.trim() || amount < 100) ? 0.5 : 1 }}

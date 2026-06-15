@@ -71,14 +71,14 @@ export default function SupportPage() {
         <div style={{ background: "linear-gradient(135deg, var(--blue) 0%, #7C3AED 100%)", borderRadius: 18, padding: "24px 20px", marginBottom: 24, color: "#fff", textAlign: "center" }}>
           <div style={{ fontSize: "2.2rem", marginBottom: 10 }}>🎭</div>
           <div style={{ fontWeight: 800, fontSize: "1.1rem", marginBottom: 6 }}>MetaMiss · Master 2026</div>
-          <div style={{ fontSize: "0.82rem", opacity: 0.85, lineHeight: 1.6 }}>Rejoignez la communauté et suivez le concours en temps réel sur nos réseaux.</div>
+          <div style={{ fontSize: "0.82rem", opacity: 0.85, lineHeight: 1.6 }}>{t.supportHeroSub || "Rejoignez la communauté et suivez le concours en temps réel sur nos réseaux."}</div>
         </div>
 
         {/* Réseaux sociaux */}
         {!socialLoading && socialLinks.length > 0 && (
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "var(--text)", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-              <span>🌐</span> Rejoignez-nous
+              <span>🌐</span> {t.joinUs || "Rejoignez-nous"}
             </div>
             <div style={{ display: "grid", gap: 10 }}>
               {/* WhatsApp group et channel côte à côte si les deux existent */}
@@ -89,14 +89,14 @@ export default function SupportPage() {
                     onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.transform = "scale(1)"}
                   >
                     <span style={{ fontSize: "1.8rem" }}>💬</span>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#25D366", textAlign: "center" }}>Groupe WhatsApp</span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#25D366", textAlign: "center" }}>{t.whatsappGroupLabel || "Groupe WhatsApp"}</span>
                   </a>
                   <a href={social.whatsappChannel} target="_blank" rel="noreferrer" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "16px 12px", background: "#25D36615", border: "1.5px solid #25D36630", borderRadius: 14, textDecoration: "none", transition: "transform 0.15s" }}
                     onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.transform = "scale(1.02)"}
                     onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.transform = "scale(1)"}
                   >
                     <span style={{ fontSize: "1.8rem" }}>📢</span>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#25D366", textAlign: "center" }}>Chaîne WhatsApp</span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#25D366", textAlign: "center" }}>{t.whatsappChannelLabel || "Chaîne WhatsApp"}</span>
                   </a>
                 </div>
               ) : (
@@ -105,8 +105,8 @@ export default function SupportPage() {
                     <a href={social.whatsappGroup} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#25D36615", border: "1.5px solid #25D36630", borderRadius: 14, textDecoration: "none" }}>
                       <span style={{ fontSize: "1.6rem", flexShrink: 0 }}>💬</span>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#25D366" }}>Groupe WhatsApp</div>
-                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Rejoignez la communauté</div>
+                        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#25D366" }}>{t.whatsappGroupLabel || "Groupe WhatsApp"}</div>
+                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{t.joinCommunity || "Rejoignez la communauté"}</div>
                       </div>
                       <svg style={{ marginLeft: "auto" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2.2"><path d="M9 18l6-6-6-6"/></svg>
                     </a>
@@ -115,8 +115,8 @@ export default function SupportPage() {
                     <a href={social.whatsappChannel} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#25D36615", border: "1.5px solid #25D36630", borderRadius: 14, textDecoration: "none" }}>
                       <span style={{ fontSize: "1.6rem", flexShrink: 0 }}>📢</span>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#25D366" }}>Chaîne WhatsApp</div>
-                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Suivez les annonces</div>
+                        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#25D366" }}>{t.whatsappChannelLabel || "Chaîne WhatsApp"}</div>
+                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{t.followAnnounce || "Suivez les annonces"}</div>
                       </div>
                       <svg style={{ marginLeft: "auto" }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="2.2"><path d="M9 18l6-6-6-6"/></svg>
                     </a>
@@ -139,7 +139,7 @@ export default function SupportPage() {
         {/* FAQ */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "var(--text)", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-            <span>❓</span> Questions fréquentes
+            <span>❓</span> {t.faqTitle || "Questions fréquentes"}
           </div>
           {faqs.map((f, i) => (
             <div key={i} style={{ border: `1.5px solid ${open===i?"var(--blue)":"var(--border)"}`, borderRadius: 12, marginBottom: 8, overflow: "hidden", transition: "border-color 0.15s", background: "var(--bg-card)" }}>
@@ -156,9 +156,9 @@ export default function SupportPage() {
         <div style={{ background: "var(--bg-card)", border: "1.5px solid var(--border)", borderRadius: 16, padding: "20px 16px", textAlign: "center" }}>
           <div style={{ fontSize: "1.6rem", marginBottom: 10 }}>📬</div>
           <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--text)", marginBottom: 6 }}>{t.contactUs}</div>
-          <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 16, lineHeight: 1.6 }}>Notre équipe est disponible pour répondre à toutes vos questions.</p>
+          <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 16, lineHeight: 1.6 }}>{t.contactDesc || "Notre équipe est disponible pour répondre à toutes vos questions."}</p>
           <a href="mailto:support@metamissemaster.cm" className="btn-outline" style={{ display: "block", fontSize: "0.85rem" }}>
-            ✉️ {t.emailBtn || "Envoyer un email"}
+            ✉️ {t.sendEmail || "Envoyer un email"}
           </a>
         </div>
 
