@@ -1,307 +1,146 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import api from "@/lib/api";
-import { useAuthStore } from "@/store/authStore";
-import toast from "react-hot-toast";
-import LangSelector from "@/components/ui/LangSelector";
-import { useT } from "@/store/langStore";
+import Link from "next/link";
 
-export default function HomePage() {
-  const router = useRouter();
-  const t = useT();
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const setTokens = useAuthStore((state) => state.setTokens);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
-  const [tab, setTab] = useState<"login" | "register">("login");
-  const [loading, setLoading] = useState(false);
-  const [showWhatsAppPopup, setShowWhatsAppPopup] = useState(false);
-  const [credentials, setCredentials] = useState({ email: "", password: "", name: "", phone: "" });
-
-  // Si déjà connecté → aller sur /home
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace("/home");
-    }
-  }, [isAuthenticated, router]);
-
-  const handleChange = (key: string, value: string) => {
-    setCredentials((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
-    try {
-      const { data } = await api.post("/auth/user/login", {
-        email: credentials.email,
-        password: credentials.password,
-      });
-      setAuth(data.data.user, data.data.accessToken, data.data.refreshToken);
-      setShowWhatsAppPopup(true);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Erreur de connexion");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
-    try {
-      const { data } = await api.post("/auth/user/register", {
-        name: credentials.name,
-        email: credentials.email,
-        password: credentials.password,
-        phone: credentials.phone,
-      });
-      setAuth(data.data.user, data.data.accessToken, data.data.refreshToken);
-      setShowWhatsAppPopup(true);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Erreur d'inscription");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+export default function LandingPage() {
   return (
-    <div style={{
-      minHeight: "100dvh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "var(--bg)",
-      padding: "20px",
-    }}>
-      <div style={{
-        width: "100%",
-        maxWidth: 440,
-        background: "var(--bg-white)",
-        borderRadius: 24,
-        boxShadow: "0 8px 40px rgba(0,0,0,0.10)",
-        overflow: "hidden",
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: "28px 28px 0",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 24,
-        }}>
-          <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "var(--text)" }}>
-            Meta<span style={{ color: "var(--blue)" }}>Miss</span>
+    <div className="page-content fade-up">
+      <style>{`
+        .lp { max-width: 560px; margin: 0 auto; padding: 18px 18px 8px; }
+        @media (min-width: 1024px) { .lp { max-width: 760px; padding-top: 28px; } }
+
+        /* Brand header */
+        .lp-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px; }
+        .lp-brand { display: flex; align-items: center; gap: 12px; }
+        .lp-logo {
+          width: 46px; height: 46px; border-radius: 50%;
+          background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+          color: #fff; display: grid; place-items: center; font-weight: 900; font-size: 1.15rem;
+          font-family: Georgia, serif; box-shadow: 0 6px 16px rgba(37,99,235,0.3);
+        }
+        .lp-brand-name { font-size: 0.95rem; font-weight: 800; color: var(--text); letter-spacing: 0.02em; }
+        .lp-brand-name b { color: var(--blue); }
+        .lp-brand-sub { font-size: 0.66rem; font-weight: 700; color: var(--blue); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 1px; }
+        .lp-official {
+          font-size: 0.66rem; font-weight: 800; color: var(--blue);
+          background: var(--blue-light); border: 1.5px solid var(--blue-mid);
+          padding: 6px 13px; border-radius: 100px; letter-spacing: 0.04em;
+        }
+
+        /* Hero */
+        .lp-eyebrow { font-size: 0.7rem; font-weight: 800; color: var(--blue); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 14px; }
+        .lp-title { font-size: clamp(2rem, 8vw, 2.9rem); font-weight: 900; line-height: 1.08; color: var(--text); letter-spacing: -0.02em; margin-bottom: 16px; }
+        .lp-title span { color: var(--blue); }
+        .lp-sub { font-size: 0.95rem; color: var(--text-muted); line-height: 1.65; margin-bottom: 26px; max-width: 460px; }
+        .lp-cta {
+          display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+          background: linear-gradient(135deg, var(--blue), #3B82F6); color: #fff;
+          font-size: 1rem; font-weight: 800; padding: 17px 24px; border-radius: 16px;
+          text-decoration: none; box-shadow: 0 10px 28px rgba(37,99,235,0.35);
+          transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .lp-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(37,99,235,0.42); }
+        .lp-cta svg { transition: transform 0.2s; }
+        .lp-cta:hover svg { transform: translateX(4px); }
+
+        /* Dark hero card */
+        .lp-card {
+          position: relative; overflow: hidden; margin: 26px 0 22px;
+          min-height: 210px; border-radius: 24px;
+          background: linear-gradient(150deg, #0B1F4D 0%, #15347E 55%, #1D4ED8 100%);
+          display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 18px;
+          box-shadow: 0 16px 40px rgba(11,31,77,0.4);
+        }
+        .lp-ring { position: absolute; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.1); }
+        .lp-card-logo {
+          width: 70px; height: 70px; border-radius: 50%;
+          background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.25);
+          display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 1.6rem;
+          font-family: Georgia, serif; backdrop-filter: blur(4px); z-index: 2;
+        }
+        .lp-card-badge {
+          z-index: 2; display: inline-flex; align-items: center; gap: 8px;
+          background: var(--blue); color: #fff; font-size: 0.84rem; font-weight: 800;
+          padding: 11px 20px; border-radius: 100px; box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .lp-card-spark { position: absolute; color: rgba(255,255,255,0.6); }
+
+        /* Feature cards */
+        .lp-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .lp-feat {
+          background: var(--bg-white); border: 1.5px solid var(--border); border-radius: 18px;
+          padding: 16px 10px; text-align: center; box-shadow: var(--shadow);
+        }
+        .lp-feat-ic {
+          width: 42px; height: 42px; border-radius: 50%; margin: 0 auto 10px;
+          background: linear-gradient(135deg, var(--blue), #3B82F6);
+          display: grid; place-items: center; box-shadow: 0 6px 14px rgba(37,99,235,0.3);
+        }
+        .lp-feat-t { font-size: 0.82rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+        .lp-feat-d { font-size: 0.66rem; color: var(--text-muted); line-height: 1.4; }
+      `}</style>
+
+      <div className="lp">
+        {/* Brand header */}
+        <div className="lp-top">
+          <div className="lp-brand">
+            <div className="lp-logo">M</div>
+            <div>
+              <div className="lp-brand-name">META MISS <b>MASTER</b></div>
+              <div className="lp-brand-sub">Édition 2026</div>
+            </div>
           </div>
-          <LangSelector />
+          <span className="lp-official">Officiel</span>
         </div>
 
-        <div style={{ padding: "0 28px 32px" }}>
-          {/* Title */}
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text)", marginBottom: 4 }}>
-            {tab === "login" ? (t.loginTitle || "Bon retour 👋") : (t.registerTitle || "Créer un compte")}
-          </h1>
-          <p style={{ fontSize: "0.84rem", color: "var(--text-muted)", marginBottom: 24 }}>
-            {tab === "login"
-              ? "Connectez-vous pour voter et suivre vos favoris."
-              : "Rejoignez la communauté Meta Miss Master."}
-          </p>
+        {/* Hero */}
+        <div className="lp-eyebrow">Plateforme officielle de vote</div>
+        <h1 className="lp-title">Votez pour vos <span>candidates</span> préférées</h1>
+        <p className="lp-sub">Soutenez vos favorites et contribuez à faire gagner la meilleure candidate. Simple, rapide et 100% sécurisé.</p>
+        <Link href="/candidates" className="lp-cta">
+          Commencer à voter
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </Link>
 
-          {/* Tabs */}
-          <div style={{
-            display: "flex", gap: 6, marginBottom: 24,
-            background: "var(--bg)", borderRadius: 14, padding: 4,
-          }}>
-            {(["login", "register"] as const).map((tabKey) => (
-              <button
-                key={tabKey}
-                type="button"
-                onClick={() => setTab(tabKey)}
-                style={{
-                  flex: 1, padding: "10px 0", borderRadius: 11, border: "none",
-                  cursor: "pointer", fontWeight: 700, fontSize: "0.88rem",
-                  fontFamily: "var(--font)",
-                  background: tab === tabKey ? "var(--bg-white)" : "transparent",
-                  color: tab === tabKey ? "var(--blue)" : "var(--text-muted)",
-                  boxShadow: tab === tabKey ? "0 1px 6px rgba(0,0,0,0.08)" : "none",
-                  transition: "all 0.2s",
-                }}
-              >
-                {tabKey === "login" ? (t.login || "Connexion") : (t.register || "Inscription")}
-              </button>
-            ))}
+        {/* Dark hero card */}
+        <div className="lp-card">
+          <div className="lp-ring" style={{ width: 130, height: 130 }} />
+          <div className="lp-ring" style={{ width: 200, height: 200 }} />
+          <div className="lp-ring" style={{ width: 280, height: 280 }} />
+          <svg className="lp-card-spark" style={{ top: 24, right: 30 }} width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2 7 7 2-7 2-2 7-2-7-7-2 7-2z" /></svg>
+          <svg className="lp-card-spark" style={{ bottom: 30, left: 34 }} width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2 7 7 2-7 2-2 7-2-7-7-2 7-2z" /></svg>
+          <div className="lp-card-logo">M</div>
+          <span className="lp-card-badge">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5" /></svg>
+            Vote sécurisé &amp; transparent
+          </span>
+        </div>
+
+        {/* Feature cards */}
+        <div className="lp-features">
+          <div className="lp-feat">
+            <div className="lp-feat-ic">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+            </div>
+            <div className="lp-feat-t">Sécurisé</div>
+            <div className="lp-feat-d">Vote 100% sécurisé et transparent</div>
           </div>
-
-          {/* Bouton Google */}
-          <button
-            type="button"
-            onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`}
-            style={{
-              width: "100%", padding: "13px 16px", borderRadius: 12,
-              border: "1.5px solid var(--border)", background: "var(--bg-white)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              gap: 10, cursor: "pointer", fontWeight: 600, fontSize: "0.92rem",
-              color: "var(--text)", fontFamily: "var(--font)", marginBottom: 20,
-              transition: "border-color 0.15s",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = "#4285F4")}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}
-          >
-            <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
-            Continuer avec Google
-          </button>
-
-          {/* Divider */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>ou</span>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+          <div className="lp-feat">
+            <div className="lp-feat-ic">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+            </div>
+            <div className="lp-feat-t">Rapide</div>
+            <div className="lp-feat-d">Résultats en temps réel</div>
           </div>
-
-          {/* Formulaire Connexion */}
-          {tab === "login" && (
-            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
-                  {t.email || "Email"}
-                </label>
-                <input
-                  type="email" required value={credentials.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  placeholder="vous@email.com"
-                  className="admin-input" style={{ width: "100%" }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
-                  {t.password || "Mot de passe"}
-                </label>
-                <input
-                  type="password" required value={credentials.password}
-                  onChange={(e) => handleChange("password", e.target.value)}
-                  placeholder="••••••••"
-                  className="admin-input" style={{ width: "100%" }}
-                />
-              </div>
-              <button type="submit" disabled={loading} className="btn-blue" style={{ marginTop: 4, opacity: loading ? 0.7 : 1 }}>
-                {loading ? (t.loading || "Chargement...") : (t.login || "Se connecter")}
-              </button>
-              <p style={{ textAlign: "center", fontSize: "0.82rem", color: "var(--text-muted)" }}>
-                {t.noAccount || "Pas de compte ?"}{" "}
-                <button type="button" onClick={() => setTab("register")} style={{ color: "var(--blue)", fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font)", fontSize: "0.82rem" }}>
-                  {t.register || "S'inscrire"}
-                </button>
-              </p>
-            </form>
-          )}
-
-          {/* Formulaire Inscription */}
-          {tab === "register" && (
-            <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
-                  {t.fullName || "Nom complet"}
-                </label>
-                <input
-                  type="text" required value={credentials.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  placeholder="Jean Dupont"
-                  className="admin-input" style={{ width: "100%" }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
-                  {t.email || "Email"}
-                </label>
-                <input
-                  type="email" required value={credentials.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  placeholder="vous@email.com"
-                  className="admin-input" style={{ width: "100%" }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
-                  {t.phone || "Téléphone"}
-                </label>
-                <input
-                  type="tel" value={credentials.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
-                  placeholder="+237 6XX XXX XXX"
-                  className="admin-input" style={{ width: "100%" }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
-                  {t.password || "Mot de passe"}
-                </label>
-                <input
-                  type="password" required value={credentials.password}
-                  onChange={(e) => handleChange("password", e.target.value)}
-                  placeholder="••••••••"
-                  className="admin-input" style={{ width: "100%" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 12, background: "var(--bg)", border: "1px solid var(--border)" }}>
-                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-2)" }}>
-                  {t.selectLanguage || "Langue"}
-                </span>
-                <LangSelector />
-              </div>
-
-              <button type="submit" disabled={loading} className="btn-blue" style={{ marginTop: 4, opacity: loading ? 0.7 : 1 }}>
-                {loading ? (t.loading || "Chargement...") : (t.register || "Créer mon compte")}
-              </button>
-              <p style={{ textAlign: "center", fontSize: "0.82rem", color: "var(--text-muted)" }}>
-                {t.alreadyAccount || "Déjà un compte ?"}{" "}
-                <button type="button" onClick={() => setTab("login")} style={{ color: "var(--blue)", fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font)", fontSize: "0.82rem" }}>
-                  {t.login || "Se connecter"}
-                </button>
-              </p>
-            </form>
-          )}
+          <div className="lp-feat">
+            <div className="lp-feat-ic">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" /></svg>
+            </div>
+            <div className="lp-feat-t">Partout</div>
+            <div className="lp-feat-d">Depuis l'Afrique et l'Europe</div>
+          </div>
         </div>
       </div>
-
-      {/* Popup WhatsApp après connexion */}
-      {showWhatsAppPopup && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 1000 }}>
-          <div style={{ width: "100%", maxWidth: 420, background: "var(--bg-white)", borderRadius: 20, boxShadow: "0 24px 80px rgba(0,0,0,0.18)", padding: 24, textAlign: "center" }}>
-            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#25D366", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-            </div>
-            <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text)", marginBottom: 10 }}>Rejoignez le groupe WhatsApp</h2>
-            <p style={{ fontSize: "0.95rem", color: "var(--text-muted)", marginBottom: 22, lineHeight: 1.6 }}>
-              Pour ne rien manquer, rejoignez notre groupe WhatsApp officiel.
-            </p>
-            <button
-              type="button"
-              onClick={() => window.open("https://chat.whatsapp.com/HuksAebrAfVBEt292xU4KF?mode=gi_t", "_blank")}
-              className="btn-blue"
-              style={{ width: "100%", marginBottom: 10 }}
-            >
-              Rejoindre le groupe WhatsApp
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowWhatsAppPopup(false); router.push("/home"); }}
-              className="btn-outline"
-              style={{ width: "100%" }}
-            >
-              Continuer sans rejoindre
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

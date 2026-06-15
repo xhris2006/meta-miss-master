@@ -1079,7 +1079,34 @@ textarea:focus-visible {
   .bottom-nav .nav-item.active svg {
     stroke: #fff;
   }
+
+  /* Raised center "Voter" button */
+  .bottom-nav .nav-cta {
+    color: #fff;
+    background: none !important;
+    justify-content: flex-end;
+  }
+  .bottom-nav .nav-cta-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-top: -26px;
+    margin-bottom: 2px;
+    background: linear-gradient(135deg, #2563EB, #3B82F6);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.5);
+    border: 3px solid rgba(255, 255, 255, 0.16);
+  }
+  .bottom-nav .nav-cta-icon svg {
+    width: 24px !important;
+    height: 24px !important;
+    stroke: #fff !important;
+  }
   .page-content {
     padding-bottom: 100px;
   }
 }
+
+/* Center CTA icon renders inline inside the desktop sidebar */
+.nav-cta-icon { display: inline-flex; align-items: center; justify-content: center; }

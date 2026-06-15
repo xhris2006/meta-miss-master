@@ -10,9 +10,9 @@ export default function BottomNav() {
   const items = [
     {
       href: "/",
-      label: t.home,
+      label: t.home || "Accueil",
       icon: (active: boolean) => (
-        <svg viewBox="0 0 24 24" fill={active ? "var(--blue)" : "none"} stroke={active ? "var(--blue)" : "var(--text-muted)"} strokeWidth="2">
+        <svg viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
           <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
           <path d="M9 21V12h6v9" />
         </svg>
@@ -22,19 +22,19 @@ export default function BottomNav() {
       href: "/candidates",
       label: t.candidates || "Candidates",
       icon: (active: boolean) => (
-        <svg viewBox="0 0 24 24" fill="none" stroke={active ? "var(--blue)" : "var(--text-muted)"} strokeWidth="2">
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
         </svg>
       ),
     },
     {
       href: "/vote",
-      label: t.vote,
+      label: t.vote || "Voter",
+      center: true,
       icon: (active: boolean) => (
-        <svg viewBox="0 0 24 24" fill="none" stroke={active ? "var(--blue)" : "var(--text-muted)"} strokeWidth="2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M9 12l2 2 4-4" />
           <rect x="3" y="4" width="18" height="16" rx="2" />
         </svg>
@@ -42,20 +42,21 @@ export default function BottomNav() {
     },
     {
       href: "/ranking",
-      label: t.results,
+      label: t.ranking || "Classement",
       icon: (active: boolean) => (
-        <svg viewBox="0 0 24 24" fill="none" stroke={active ? "var(--blue)" : "var(--text-muted)"} strokeWidth="2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M18 20V10M12 20V4M6 20v-6" />
         </svg>
       ),
     },
     {
-      href: "/profile",
-      label: t.profile,
+      href: "/support",
+      label: t.help || "Aide",
       icon: (active: boolean) => (
-        <svg viewBox="0 0 24 24" fill="none" stroke={active ? "var(--blue)" : "var(--text-muted)"} strokeWidth="2">
-          <circle cx="12" cy="7" r="4" />
-          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
         </svg>
       ),
     },
@@ -63,11 +64,11 @@ export default function BottomNav() {
 
   return (
     <nav className="bottom-nav">
-      {items.map(({ href, label, icon }) => {
+      {items.map(({ href, label, icon, center }) => {
         const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
         return (
-          <Link key={href} href={href} className={`nav-item${active ? " active" : ""}`}>
-            {icon(active)}
+          <Link key={href} href={href} className={`nav-item${active ? " active" : ""}${center ? " nav-cta" : ""}`}>
+            {center ? <span className="nav-cta-icon">{icon(true)}</span> : icon(active)}
             {label}
           </Link>
         );

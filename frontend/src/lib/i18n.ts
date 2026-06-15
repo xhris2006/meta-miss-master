@@ -8,6 +8,8 @@ export const translations = {
     candidates: "Candidates",
     vote: "Voter",
     results: "Résultats",
+    ranking: "Classement",
+    help: "Aide",
     profile: "Profil",
     // Auth
     login: "Se connecter",
@@ -126,6 +128,8 @@ export const translations = {
     candidates: "Candidates",
     vote: "Vote",
     results: "Results",
+    ranking: "Ranking",
+    help: "Help",
     profile: "Profile",
     // Auth
     login: "Sign in",

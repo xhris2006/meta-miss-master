@@ -11,7 +11,7 @@ type LoginPageProps = {
 };
 
 export default function LoginPage({ searchParams }: LoginPageProps) {
-  const redirect = searchParams?.redirect || "/profile";
+  const redirect = searchParams?.redirect || "/";
   const initialTab = searchParams?.tab === "register" ? "register" : "login";
   const token = searchParams?.token;
   const refreshToken = searchParams?.refreshToken;
