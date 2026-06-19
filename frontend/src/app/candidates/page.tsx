@@ -190,8 +190,8 @@ export default function CandidatesPage() {
             const photo = c.photoUrl?.startsWith("http") ? c.photoUrl : `${apiBase}${c.photoUrl}`;
             const rank = rankMap.get(c.id) || i + 1;
             const rankClass = rank === 1 ? "gold" : rank === 2 ? "silver" : rank === 3 ? "bronze" : "";
-            const votes = c.totalVotes || 0;
-            const vDisplay = votes >= 1000 ? `${(votes / 1000).toFixed(1)}K` : votes;
+            const likes = c.totalLikes || 0;
+            const lDisplay = likes >= 1000 ? `${(likes / 1000).toFixed(1)}K` : likes;
             return (
               <Link key={c.id} href={`/candidates/${c.id}`} className="cand-card fade-up" style={{ animationDelay: `${Math.min(i, 12) * 0.04}s` }}>
                 <div className="cand-card-img-wrap">
@@ -200,10 +200,6 @@ export default function CandidatesPage() {
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M2 19h20v2H2v-2zm18-9l-3 9H7L4 10l4 3 4-6 4 6 4-3z" /></svg>
                     #{rank}
                   </div>
-                  <div className="cand-card-votes">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="var(--blue)"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" /></svg>
-                    {vDisplay}
-                  </div>
                   <div className="cand-card-overlay">
                     <div className="cand-card-name">{c.name}</div>
                     <div className="cand-card-cat">{c.city || "Miss"}</div>
@@ -211,9 +207,9 @@ export default function CandidatesPage() {
                 </div>
                 <div className="cand-card-foot">
                   <span className="pos">{t.position || "Position"} #{rank}</span>
-                  <span className="v">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" /></svg>
-                    {vDisplay}
+                  <span className="v" title="Likes">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="#ef4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" /></svg>
+                    {lDisplay}
                   </span>
                 </div>
                 <div className="cand-card-cta">
