@@ -12,21 +12,48 @@ const PRESETS = [100, 500, 1000, 5000];
 const LAST_VOTE_KEY = (candidateId: string) => `mmm-last-vote-${candidateId}`;
 const COOLDOWN_MS = 30 * 1000;
 
-// Méthodes affichées à l'utilisateur. Orange & MTN passent par Fapshi côté back.
+// Méthodes affichées à l'utilisateur.
+// Orange & MTN passent par Fapshi. Afrique / Europe / Cartes passent par GeniusPay.
+// feePercent + feeFixed = frais GeniusPay (opérateur + 1% GeniusPay + 100 XOF)
+// répercutés sur le votant. fee = 0 → aucun frais ajouté (Fapshi).
 const METHODS = [
-  { id: "orange", provider: "fapshi", label: "Orange Money", sub: "Paiement mobile", img: "/pay/orange-money.svg", badge: "Recommandé", badgeColor: "#FF7900" },
-  { id: "mtn", provider: "fapshi", label: "MTN Mobile Money", sub: "Paiement mobile", img: "/pay/mtn-momo.svg", badge: "Recommandé", badgeColor: "#16a34a" },
-  { id: "geniuspay", provider: "geniuspay", label: "Genius Pay", sub: "Carte · International — tous les pays", img: null, badge: "🌍 Monde entier", badgeColor: "#2563EB" },
+  { id: "orange", provider: "fapshi", region: null, label: "Orange Money", subKey: "payMobile", sub: "Paiement mobile", img: "/pay/orange-money.svg", badgeKey: "recommended", badge: "Recommandé", badgeColor: "#FF7900", feePercent: 0, feeFixed: 0 },
+  { id: "mtn", provider: "fapshi", region: null, label: "MTN Mobile Money", subKey: "payMobile", sub: "Paiement mobile", img: "/pay/mtn-momo.svg", badgeKey: "recommended", badge: "Recommandé", badgeColor: "#16a34a", feePercent: 0, feeFixed: 0 },
+  { id: "africa", provider: "geniuspay", region: "africa", label: "Afrique", subKey: "payAfrica", sub: "Mobile Money · Wave, MTN, Orange, Moov…", img: null, badgeKey: "badgeAfrica", badge: "🌍 20+ pays africains", badgeColor: "#16a34a", feePercent: 4.5, feeFixed: 100 },
+  { id: "europe", provider: "geniuspay", region: "europe", label: "Europe", subKey: "payEurope", sub: "Carte & wallets internationaux · Visa, Apple Pay, Google Pay", img: null, badgeKey: "badgeEurope", badge: "🇪🇺 International", badgeColor: "#2563EB", feePercent: 6, feeFixed: 100 },
+  { id: "cards", provider: "geniuspay", region: "cards", label: "Cartes", subKey: "payCards", sub: "Carte bancaire · Visa, Mastercard", img: null, badgeKey: "badgeCards", badge: "💳 Carte bancaire", badgeColor: "#7C3AED", feePercent: 6, feeFixed: 100 },
 ];
 
-const COUNTRIES = [
-  { code: "CI", label: "Côte d'Ivoire" },
-  { code: "ML", label: "Mali" },
-  { code: "SN", label: "Sénégal" },
-  { code: "FR", label: "France" },
-  { code: "GB", label: "Europe" },
-  { code: "OTHER", label: "Autre pays" },
-];
+// Pays proposés selon la région du mode de paiement choisi.
+const COUNTRY_GROUPS: Record<string, { code: string; label: string }[]> = {
+  africa: [
+    { code: "CI", label: "Côte d'Ivoire" },
+    { code: "SN", label: "Sénégal" },
+    { code: "ML", label: "Mali" },
+    { code: "BF", label: "Burkina Faso" },
+    { code: "BJ", label: "Bénin" },
+    { code: "TG", label: "Togo" },
+    { code: "CM", label: "Cameroun" },
+    { code: "GH", label: "Ghana" },
+    { code: "NG", label: "Nigeria" },
+  ],
+  europe: [
+    { code: "FR", label: "France" },
+    { code: "BE", label: "Belgique" },
+    { code: "CH", label: "Suisse" },
+    { code: "DE", label: "Allemagne" },
+    { code: "ES", label: "Espagne" },
+    { code: "IT", label: "Italie" },
+    { code: "GB", label: "Royaume-Uni" },
+  ],
+  cards: [],
+};
+
+// Frais GeniusPay répercutés sur le votant (arrondi au FCFA supérieur).
+function computeFee(amount: number, feePercent: number, feeFixed: number) {
+  if (!feePercent && !feeFixed) return 0;
+  return Math.ceil((amount * feePercent) / 100) + feeFixed;
+}
 
 type Step = "form" | "confirm" | "success" | "cooldown";
 
@@ -105,6 +132,19 @@ export default function VoteByIdPage() {
   };
 
   const votes = Math.floor(amount / 100);
+  const selectedMethod = METHODS.find((m) => m.id === method) || METHODS[0];
+  const fee = computeFee(amount, selectedMethod.feePercent, selectedMethod.feeFixed);
+  const totalToPay = amount + fee;
+  const countryOptions = selectedMethod.region ? COUNTRY_GROUPS[selectedMethod.region] || [] : [];
+
+  const handleMethod = (m: (typeof METHODS)[number]) => {
+    setMethod(m.id);
+    if (m.region === "cards") {
+      setCountry("FR"); // carte internationale par défaut
+    } else if (m.region && COUNTRY_GROUPS[m.region]?.length) {
+      setCountry(COUNTRY_GROUPS[m.region][0].code);
+    }
+  };
 
   const handleAmountInput = (val: string) => {
     setCustomAmount(val);
@@ -122,11 +162,14 @@ export default function VoteByIdPage() {
     setLoading(true);
     try {
       const selected = METHODS.find((m) => m.id === method) || METHODS[0];
+      const feeAmount = computeFee(amount, selected.feePercent, selected.feeFixed);
       const { data } = await api.post("/payments/initialize", {
         candidateId: id,
         amount,
-        provider: selected.provider, // fapshi (Orange/MTN) ou geniuspay
+        feeAmount, // frais répercutés sur le votant (0 pour Fapshi)
+        provider: selected.provider, // fapshi (Orange/MTN) ou geniuspay (Afrique/Europe/Cartes)
         operator: selected.provider === "fapshi" ? method : undefined, // orange | mtn
+        region: selected.region || undefined, // africa | europe | cards
         country,
         voterName,
         voterEmail,
@@ -231,9 +274,23 @@ export default function VoteByIdPage() {
             <div style={{ fontSize: "0.72rem", color: C.blue, fontWeight: 600, marginTop: 2 }}>{candidate.city || "Miss"}</div>
           </div>
         </div>
-        <div style={{ background: C.blueBg, border: `1px solid ${C.blueBorder}`, borderRadius: 10, padding: "12px 16px", marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "0.82rem", color: C.muted }}>{votes} {t.voteWord || "vote"}{votes > 1 ? "s" : ""}</span>
-          <span style={{ fontSize: "0.9rem", fontWeight: 700, color: C.blue }}>{amount.toLocaleString("fr-FR")} FCFA</span>
+        <div style={{ background: C.blueBg, border: `1px solid ${C.blueBorder}`, borderRadius: 10, padding: "12px 16px", marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "0.82rem", color: C.muted }}>{votes} {t.voteWord || "vote"}{votes > 1 ? "s" : ""}</span>
+            <span style={{ fontSize: "0.9rem", fontWeight: 700, color: C.blue }}>{amount.toLocaleString("fr-FR")} FCFA</span>
+          </div>
+          {fee > 0 && (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                <span style={{ fontSize: "0.78rem", color: C.muted }}>{t.fees || "Frais de service"}</span>
+                <span style={{ fontSize: "0.82rem", color: C.text }}>{fee.toLocaleString("fr-FR")} FCFA</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${C.blueBorder}`, marginTop: 8, paddingTop: 8 }}>
+                <span style={{ fontSize: "0.84rem", fontWeight: 700, color: C.text }}>{t.totalToPay || "Total à payer"}</span>
+                <span style={{ fontSize: "0.95rem", fontWeight: 800, color: C.blue }}>{totalToPay.toLocaleString("fr-FR")} FCFA</span>
+              </div>
+            </>
+          )}
         </div>
         <button onClick={handleConfirm} disabled={loading} className="btn-blue" style={{ marginBottom: 10 }}>
           {loading ? t.redirecting : t.confirmMyVote}
@@ -339,8 +396,10 @@ export default function VoteByIdPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
           {METHODS.map(m => {
             const selected = method === m.id;
+            const subLabel = (t as any)[m.subKey] || m.sub;
+            const badgeLabel = (t as any)[m.badgeKey] || m.badge;
             return (
-              <button key={m.id} onClick={() => setMethod(m.id)} style={{
+              <button key={m.id} onClick={() => handleMethod(m)} style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 padding: "12px 14px", borderRadius: 14,
                 border: `1.5px solid ${selected ? C.blue : C.inputBorder}`,
@@ -355,9 +414,9 @@ export default function VoteByIdPage() {
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: "0.9rem", fontWeight: 700, color: selected ? C.blue : C.text }}>{m.label}</div>
-                    <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 1 }}>{m.id === "geniuspay" ? (t.payIntl || m.sub) : (t.payMobile || m.sub)}</div>
+                    <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 1 }}>{subLabel}</div>
                     <div style={{ marginTop: 5, display: "inline-block", fontSize: "0.66rem", fontWeight: 700, color: m.badgeColor, background: `${m.badgeColor}18`, border: `1px solid ${m.badgeColor}33`, borderRadius: 20, padding: "2px 8px" }}>
-                      {m.id === "geniuspay" ? (t.worldwide || m.badge) : (t.recommended || m.badge)}
+                      {badgeLabel}
                     </div>
                   </div>
                 </div>
@@ -369,14 +428,34 @@ export default function VoteByIdPage() {
           })}
         </div>
 
-        {/* Genius Pay : sélection du pays (disponible partout dans le monde) */}
-        {method === "geniuspay" && (
+        {/* Sélection du pays selon la région (Afrique / Europe). Les cartes sont internationales. */}
+        {countryOptions.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: "0.75rem", fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{t.country || "Pays"}</div>
+            <div style={{ fontSize: "0.75rem", fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+              {selectedMethod.region === "africa" ? (t.africaCountry || "Pays (Afrique)") : (t.europeCountry || "Pays (Europe)")}
+            </div>
             <select value={country} onChange={e => setCountry(e.target.value)} style={{ ...inputStyle, appearance: "none", MozAppearance: "none", WebkitAppearance: "none" }}>
-              {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+              {countryOptions.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
             </select>
-            <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 10 }}>{t.geniusNote || "Genius Pay choisit automatiquement le meilleur moyen de paiement disponible dans votre pays — partout dans le monde."}</div>
+          </div>
+        )}
+
+        {/* Frais répercutés sur le votant (modes GeniusPay uniquement) */}
+        {fee > 0 && (
+          <div style={{ background: C.blueBg, border: `1px solid ${C.blueBorder}`, borderRadius: 10, padding: "12px 14px", marginBottom: 18 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <span style={{ fontSize: "0.8rem", color: C.muted }}>{votes} {t.voteWord || "vote"}{votes > 1 ? "s" : ""}</span>
+              <span style={{ fontSize: "0.82rem", color: C.text }}>{amount.toLocaleString("fr-FR")} FCFA</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: "0.8rem", color: C.muted }}>{t.fees || "Frais de service"} ({selectedMethod.feePercent}% + {selectedMethod.feeFixed} XOF)</span>
+              <span style={{ fontSize: "0.82rem", color: C.text }}>{fee.toLocaleString("fr-FR")} FCFA</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${C.blueBorder}`, paddingTop: 8 }}>
+              <span style={{ fontSize: "0.84rem", fontWeight: 700, color: C.text }}>{t.totalToPay || "Total à payer"}</span>
+              <span style={{ fontSize: "0.95rem", fontWeight: 800, color: C.blue }}>{totalToPay.toLocaleString("fr-FR")} FCFA</span>
+            </div>
+            <div style={{ fontSize: "0.7rem", color: C.muted, marginTop: 8, lineHeight: 1.5 }}>{t.feesNote || "Des frais de service s'appliquent à ce mode de paiement et sont à votre charge. Le candidat reçoit l'intégralité de vos votes."}</div>
           </div>
         )}
 
@@ -386,6 +465,7 @@ export default function VoteByIdPage() {
           onClick={() => {
             if (!voterName.trim() || !voterEmail.trim()) { toast.error(t.error); return; }
             if (amount < 100 || amount % 100 !== 0) { toast.error(t.amountMultipleError || "Le montant doit être un multiple de 100 FCFA"); return; }
+            if (selectedMethod.provider === "geniuspay" && amount < 200) { toast.error("Montant minimum 200 FCFA (2 votes) pour ce mode de paiement"); return; }
             setStep("confirm");
           }}
           style={{ opacity: (!voterName.trim() || !voterEmail.trim() || amount < 100) ? 0.5 : 1 }}

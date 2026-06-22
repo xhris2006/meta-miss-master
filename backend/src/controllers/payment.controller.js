@@ -10,20 +10,22 @@ class PaymentController {
         return res.status(422).json({ success: false, errors: errors.array() });
       }
 
-      const { candidateId, amount, provider, country, voterName, voterEmail, voterPhone } = req.body;
+      const { candidateId, amount, feeAmount, provider, region, country, voterName, voterEmail, voterPhone } = req.body;
 
       const minAmount = provider === "geniuspay" ? 200 : 100;
       if (amount < minAmount) {
         return res.status(400).json({
           success: false,
-          message: `Montant minimum : ${minAmount} FCFA${provider === "geniuspay" ? " (2 votes minimum avec GeniusPay)" : " (1 vote)"}`,
+          message: `Montant minimum : ${minAmount} FCFA${provider === "geniuspay" ? " (2 votes minimum)" : " (1 vote)"}`,
         });
       }
 
       const result = await paymentService.initializePayment({
         candidateId,
         amount: Math.floor(amount),
+        feeAmount: Math.max(0, Math.floor(feeAmount || 0)),
         provider: provider || "fapshi",
+        region,
         country,
         voterName,
         voterEmail,

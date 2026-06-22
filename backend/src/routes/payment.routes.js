@@ -32,9 +32,19 @@ router.post(
       .isInt({ min: 100 })
       .withMessage("Montant minimum 100 FCFA"),
 
+    body("feeAmount")
+      .optional({ nullable: true })
+      .isInt({ min: 0, max: 1000000 })
+      .withMessage("Frais invalides"),
+
     body("provider")
       .isIn(["fapshi", "paypal", "geniuspay"])
       .withMessage("Provider invalide"),
+
+    body("region")
+      .optional({ nullable: true, checkFalsy: true })
+      .isIn(["africa", "europe", "cards"])
+      .withMessage("Région invalide"),
 
     body("country")
       .optional({ nullable: true, checkFalsy: true })
