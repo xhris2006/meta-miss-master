@@ -457,7 +457,7 @@ async function processGeniusPayWebhook(body) {
 
 // ─── INITIALIZE PAYMENT ───────────────────────────────────────────────────────
 
-async function initializePayment({ candidateId, amount, provider, country, voterName, voterEmail, voterPhone }) {
+async function initializePayment({ candidateId, amount, feeAmount = 0, provider, region, country, voterName, voterEmail, voterPhone }) {
   const contest = await prisma.contest.findFirst({ where: { status: "OPEN" } });
   if (!contest) throw new AppError("Les votes sont actuellement fermés", 403);
 
@@ -466,11 +466,16 @@ async function initializePayment({ candidateId, amount, provider, country, voter
   });
   if (!candidate) throw new AppError("Candidat introuvable ou non approuvé", 404);
 
+  // Les votes sont calculés sur le montant de base. Les frais éventuels
+  // (modes GeniusPay) sont répercutés sur le votant mais ne donnent pas de votes.
   const votesCount = amountToVotes(amount);
   if (votesCount < 1) throw new AppError("Montant minimum : 100 FCFA", 400);
 
   const validProviders = ["fapshi", "paypal", "geniuspay"];
   if (!validProviders.includes(provider)) throw new AppError("Provider invalide", 400);
+
+  const fee = provider === "geniuspay" ? Math.max(0, Math.floor(feeAmount || 0)) : 0;
+  const chargedAmount = amount + fee;
 
   const voter = await findOrCreateVoter({ voterName, voterEmail, voterPhone });
   const txRef = `MMM-${provider.toUpperCase()}-${uuidv4()}`;
@@ -479,12 +484,15 @@ async function initializePayment({ candidateId, amount, provider, country, voter
     data: {
       userId: voter.id,
       candidateId,
-      amount,
+      amount, // montant de base (base des votes)
       votesCount,
       flutterwaveTxRef: txRef,
       status: "PENDING",
       metadata: {
         provider,
+        region: region || null,
+        feeAmount: fee,
+        chargedAmount, // total réellement débité au votant (base + frais)
         country: country || "CM",
         candidateName: candidate.name,
         candidateType: candidate.type,
@@ -497,7 +505,7 @@ async function initializePayment({ candidateId, amount, provider, country, voter
 
   const params = {
     txRef,
-    amount,
+    amount: chargedAmount, // la passerelle débite le total (base + frais)
     userEmail: voter.email,
     userName: voter.name || voter.email,
     candidateName: candidate.name,
@@ -563,6 +571,8 @@ async function initializePayment({ candidateId, amount, provider, country, voter
     paymentLink,
     votesCount,
     amount,
+    feeAmount: fee,
+    chargedAmount,
     candidateName: candidate.name,
     provider,
   };
