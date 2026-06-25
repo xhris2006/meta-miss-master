@@ -105,6 +105,17 @@ export default function AdminPage() {
   const reject = async (id: string) => { try { await api.patch(`/admin/candidates/${id}/reject`); toast.success("Rejeté"); load(); } catch { toast.error("Erreur"); } };
   const del = async (id: string) => { if (!confirm("Supprimer définitivement ?")) return; try { await api.delete(`/admin/candidates/${id}`); toast.success("Supprimé"); load(); } catch { toast.error("Erreur"); } };
 
+  // Remet TOUS les votes à zéro (tous les candidats). Action irréversible.
+  const resetAllVotes = async () => {
+    if (!confirm("⚠️ Remettre TOUS les votes à zéro pour tout le monde ?\nCette action est irréversible.")) return;
+    if (!confirm("Dernière confirmation : tous les votes de tous les candidats seront supprimés.")) return;
+    try {
+      const res = await api.post("/admin/votes/reset", { confirm: true });
+      toast.success(res.data?.message || "Votes réinitialisés ✓");
+      load();
+    } catch { toast.error("Erreur lors de la réinitialisation"); }
+  };
+
   const openEdit = (c: any) => {
     setIsCreating(false); setEditingCandidate(c);
     setEditValues({ name: c.name||"", city: c.city||"", age: String(c.age||""), bio: c.bio||"", type: c.type||"MISS", status: c.status||"PENDING", instagram: c.instagram||"", tiktok: c.tiktok||"", snap: c.snap||"", whatsappFan: c.whatsappFan||"", phone: c.phone||"", email: c.email||"" });
@@ -261,17 +272,31 @@ export default function AdminPage() {
 
           {/* ── OVERVIEW ── */}
           {tab === "overview" && (
-            <div className="admin-stats">
-              {statCards.map(card => (
-                <div key={card.label} className="admin-stat-c" style={{ ...S.card }}>
-                  <div className="ic" style={{ background: card.color + "18" }}>
-                    <card.Icon size={17} color={card.color} />
+            <>
+              <div className="admin-stats">
+                {statCards.map(card => (
+                  <div key={card.label} className="admin-stat-c" style={{ ...S.card }}>
+                    <div className="ic" style={{ background: card.color + "18" }}>
+                      <card.Icon size={17} color={card.color} />
+                    </div>
+                    <div className="v">{card.val}</div>
+                    <div className="l">{card.label}</div>
                   </div>
-                  <div className="v">{card.val}</div>
-                  <div className="l">{card.label}</div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+
+              {/* Zone dangereuse : reset des votes */}
+              <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", borderColor: "#FECACA", background: "#FFFCFC" }}>
+                <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4 }}>⚠️ Zone dangereuse</div>
+                <p style={{ color: "#94A3B8", fontSize: 13, margin: "0 0 16px", lineHeight: 1.5 }}>
+                  Remet le compteur de votes de <strong>tous les candidats</strong> à zéro et supprime tous les votes.
+                  Les paiements (historique) sont conservés. <strong style={{ color: "#EF4444" }}>Action irréversible.</strong>
+                </p>
+                <button onClick={resetAllVotes} style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 20px", borderRadius: 14, background: "#EF4444", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px #EF444430", fontFamily: "inherit" }}>
+                  <Trash2 size={16} /> Réinitialiser tous les votes
+                </button>
+              </div>
+            </>
           )}
 
           {/* ── CANDIDATES ── */}
