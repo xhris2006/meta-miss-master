@@ -16,7 +16,6 @@ type Tab = "overview" | "candidates" | "payments" | "contests" | "users";
 const EMPTY_EDIT = { name: "", city: "", age: "", bio: "", type: "MISS", status: "PENDING", instagram: "", tiktok: "", snap: "", whatsappFan: "", phone: "", email: "" };
 const EMPTY_SOCIAL = { whatsappGroup: "", whatsappChannel: "", tiktok: "", youtube: "", snapchat: "", telegram: "" };
 
-/* ─── Shared styles ─────────────────────────────────────────────────────── */
 const S = {
   bg: "#F1F5F9",
   card: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 20 } as React.CSSProperties,
@@ -37,7 +36,6 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  /* modals */
   const [viewingCandidate, setViewingCandidate] = useState<any>(null);
   const [editingCandidate, setEditingCandidate] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -58,19 +56,17 @@ export default function AdminPage() {
   const [editContestValues, setEditContestValues] = useState({ name: "", startDate: "", endDate: "" });
   const [editContestSaving, setEditContestSaving] = useState(false);
 
-  /* réseaux sociaux */
   const [socialValues, setSocialValues] = useState({ ...EMPTY_SOCIAL });
   const [socialSaving, setSocialSaving] = useState(false);
   const [socialLoaded, setSocialLoaded] = useState(false);
 
-  /* votes doubles */
   const [doubleVotes, setDoubleVotes] = useState(false);
   const [doubleSaving, setDoubleSaving] = useState(false);
 
-  const apiBase = (process.env.NEXT_PUBLIC_API_URL || "<http://localhost:5000/api>").replace("/api", "");
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
 
   useEffect(() => {
-    if (!hasHydrated) return; // attendre la relecture de la session avant de décider
+    if (!hasHydrated) return;
     if (!isAuthenticated || user?.role !== "ADMIN") { router.push("/xhrisadmin"); return; }
     load();
   }, [hasHydrated, isAuthenticated]);
@@ -96,7 +92,6 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  /* Charger les réseaux quand on arrive sur l'onglet contests */
   useEffect(() => {
     if (tab === "contests" && !socialLoaded) {
       api.get("/admin/social-links").then(r => {
@@ -111,7 +106,6 @@ export default function AdminPage() {
   const reject = async (id: string) => { try { await api.patch(`/admin/candidates/${id}/reject`); toast.success("Rejeté"); load(); } catch { toast.error("Erreur"); } };
   const del = async (id: string) => { if (!confirm("Supprimer définitivement ?")) return; try { await api.delete(`/admin/candidates/${id}`); toast.success("Supprimé"); load(); } catch { toast.error("Erreur"); } };
 
-  // Remet TOUS les votes à zéro (tous les candidats). Action irréversible.
   const resetAllVotes = async () => {
     if (!confirm("⚠️ Remettre TOUS les votes à zéro pour tout le monde ?\nCette action est irréversible.")) return;
     if (!confirm("Dernière confirmation : tous les votes de tous les candidats seront supprimés.")) return;
@@ -122,17 +116,16 @@ export default function AdminPage() {
     } catch { toast.error("Erreur lors de la réinitialisation"); }
   };
 
-  // Active/désactive la promo "votes doubles".
   const toggleDoubleVotes = async () => {
     const next = !doubleVotes;
     setDoubleSaving(true);
-    setDoubleVotes(next); // optimiste
+    setDoubleVotes(next);
     try {
       const res = await api.put("/admin/double-votes", { enabled: next });
       setDoubleVotes(res.data?.data?.enabled ?? next);
       toast.success(res.data?.message || (next ? "Votes doubles activés ✓" : "Votes doubles désactivés"));
     } catch {
-      setDoubleVotes(!next); // rollback
+      setDoubleVotes(!next);
       toast.error("Erreur");
     } finally {
       setDoubleSaving(false);
@@ -152,9 +145,6 @@ export default function AdminPage() {
     setSaving(true);
     try {
       const fd = new FormData();
-      // Création : on n'envoie que les champs remplis.
-      // Édition : on envoie TOUS les champs (même vides) pour que vider une
-      // valeur (Instagram, TikTok, etc.) la supprime côté serveur.
       Object.entries(editValues).forEach(([k, v]) => {
         if (isCreating) {
           if (v) fd.append(k, v);
@@ -164,7 +154,7 @@ export default function AdminPage() {
       });
       if (photoFile) fd.append("photo", photoFile);
       if (isCreating) { await api.post("/admin/candidates", fd, { headers: { "Content-Type": "multipart/form-data" } }); toast.success("Candidat ajouté ✓"); }
-      else { await api.patch(`/admin/candidates/${<editingCandidate.id>}`, fd, { headers: { "Content-Type": "multipart/form-data" } }); toast.success("Mis à jour ✓"); }
+      else { await api.patch(`/admin/candidates/${editingCandidate.id}`, fd, { headers: { "Content-Type": "multipart/form-data" } }); toast.success("Mis à jour ✓"); }
       setEditingCandidate(null); load();
     } catch { toast.error("Erreur d'enregistrement"); }
     setSaving(false);
@@ -182,9 +172,8 @@ export default function AdminPage() {
   const statusColor: Record<string, string> = { APPROVED: "#10B981", PENDING: "#F59E0B", REJECTED: "#EF4444", COMPLETED: "#10B981", FAILED: "#EF4444", REFUNDED: "#EF4444", OPEN: "#10B981", CLOSED: "#64748B" };
   const sc = (s: string) => statusColor[s] || "#64748B";
 
-  /* ── PDF exports ── */
   const [exportingTx, setExportingTx] = useState(false);
-  const candidateNameById: Record<string, string> = Object.fromEntries(candidates.map((c: any) => [<c.id>, c.name]));
+  const candidateNameById: Record<string, string> = Object.fromEntries(candidates.map((c: any) => [c.id, c.name]));
 
   const handleCandidatePdf = async (c: any) => {
     try { await downloadCandidatePdf(c, apiBase); toast.success("PDF généré ✓"); }
@@ -194,7 +183,6 @@ export default function AdminPage() {
   const handleTransactionsPdf = async () => {
     setExportingTx(true);
     try {
-      // Fetch every transaction (not only the 50 displayed) for a complete report.
       const res = await api.get("/admin/payments?limit=10000");
       const all = res.data?.data?.payments?.length ? res.data.data.payments : payments;
       await downloadTransactionsPdf(all, candidateNameById);
@@ -203,7 +191,6 @@ export default function AdminPage() {
     setExportingTx(false);
   };
 
-  // Small label/value cell used by the payments detail grid.
   const cell = (label: string, value: any) => (
     <div>
       <div style={{ color: "#94A3B8", fontWeight: 700, fontSize: 10.5, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
@@ -256,23 +243,19 @@ export default function AdminPage() {
   ] : [];
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: <S.bg>, fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: S.bg, fontFamily: "system-ui,sans-serif" }}>
 
-      {/* Desktop sidebar */}
       <aside className="admin-desktop-sidebar" style={{ display: "none", flexDirection: "column", gap: 16, position: "fixed", top: 0, left: 0, bottom: 0, width: 260, background: "#fff", borderRight: "1px solid #E2E8F0", padding: "28px 18px", zIndex: 50 }}>
         <SidebarContent />
       </aside>
 
-      {/* Mobile overlay */}
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 60, backdropFilter: "blur(4px)" }} />}
       <aside style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 270, background: "#fff", borderRight: "1px solid #E2E8F0", padding: "28px 18px", zIndex: 70, display: "flex", flexDirection: "column", gap: 16, transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform .25s ease" }}>
         <SidebarContent />
       </aside>
 
-      {/* Main */}
       <main className="admin-main-content" style={{ flex: 1, minHeight: "100vh", padding: "24px 20px 60px" }}>
 
-        {/* Topbar */}
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
           <button className="admin-menu-btn" onClick={() => setSidebarOpen(true)} style={{ width: 44, height: 44, borderRadius: 14, border: "1.5px solid #E2E8F0", background: "#fff", display: "grid", placeItems: "center", cursor: "pointer" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
@@ -293,7 +276,6 @@ export default function AdminPage() {
           <div style={{ minHeight: 300, display: "grid", placeItems: "center", color: "#94A3B8" }}>Chargement...</div>
         ) : (<>
 
-          {/* ── OVERVIEW ── */}
           {tab === "overview" && (
             <>
               <div className="admin-stats">
@@ -308,7 +290,6 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              {/* Votes doubles (promo) */}
               <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", borderColor: doubleVotes ? "#10B98155" : "#E2E8F0", background: doubleVotes ? "#F0FDF4" : "#fff" }}>
                 <div style={{ flex: 1, minWidth: 220 }}>
                   <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
@@ -332,7 +313,6 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* Zone dangereuse : reset des votes */}
               <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", borderColor: "#FECACA", background: "#FFFCFC" }}>
                 <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4 }}>⚠️ Zone dangereuse</div>
                 <p style={{ color: "#94A3B8", fontSize: 13, margin: "0 0 16px", lineHeight: 1.5 }}>
@@ -346,13 +326,12 @@ export default function AdminPage() {
             </>
           )}
 
-          {/* ── CANDIDATES ── */}
           {tab === "candidates" && (
             <div style={{ display: "grid", gap: 12 }}>
               {candidates.map((c, i) => {
                 const photo = c.photoUrl?.startsWith("http") ? c.photoUrl : `${apiBase}${c.photoUrl}`;
                 return (
-                  <div key={<c.id>} className="acand-row" style={{ ...S.card }}>
+                  <div key={c.id} className="acand-row" style={{ ...S.card }}>
                     <div className="acand-main" onClick={() => setViewingCandidate(c)}>
                       <div className="acand-photo">
                         <Image src={photo} alt={c.name} fill style={{ objectFit: "cover" }} onError={(e: any) => { e.target.style.display = "none"; }} />
@@ -372,9 +351,9 @@ export default function AdminPage() {
                     <div className="acand-actions">
                       <button onClick={() => openEdit(c)} title="Modifier"><Edit3 size={16} color="#6366F1" /></button>
                       {c.status === "PENDING"
-                        ? <button onClick={() => approve(<c.id>)} title="Approuver"><CheckCircle2 size={16} color="#10B981" /></button>
+                        ? <button onClick={() => approve(c.id)} title="Approuver"><CheckCircle2 size={16} color="#10B981" /></button>
                         : <button onClick={() => handleCandidatePdf(c)} title="Fiche PDF"><FileDown size={16} color="#2563EB" /></button>}
-                      <button onClick={() => del(<c.id>)} title="Supprimer"><Trash2 size={16} color="#EF4444" /></button>
+                      <button onClick={() => del(c.id)} title="Supprimer"><Trash2 size={16} color="#EF4444" /></button>
                     </div>
                   </div>
                 );
@@ -382,10 +361,8 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ── PAYMENTS ── */}
           {tab === "payments" && (
             <div style={{ display: "grid", gap: 14 }}>
-              {/* Toolbar : récap + export PDF */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                 <div style={{ fontSize: 13, color: "#64748B" }}>
                   <strong style={{ color: "#0F172A" }}>{payments.length}</strong> transaction(s) ·{" "}
@@ -406,7 +383,7 @@ export default function AdminPage() {
                 const candName = p.candidateName || candidateNameById[p.candidateId] || "—";
                 const phone = p.user?.phone || p.metadata?.phone || p.metadata?.phone_number || "—";
                 return (
-                  <div key={<p.id>} style={{ ...S.card, padding: "16px 20px" }}>
+                  <div key={p.id} style={{ ...S.card, padding: "16px 20px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, alignItems: "flex-start" }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 14 }}>{p.user?.name || "—"}</div>
@@ -430,11 +407,8 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ── CONTESTS & RÉSEAUX ── */}
           {tab === "contests" && (
             <div style={{ display: "grid", gap: 24 }}>
-
-              {/* Section concours */}
               <div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
                   <div>
@@ -454,7 +428,7 @@ export default function AdminPage() {
                 ) : contests.map((ct: any) => {
                   const isOpen = ct.status === "OPEN";
                   return (
-                    <div key={<ct.id>} style={{ ...S.card, padding: "20px 22px", position: "relative", overflow: "hidden", marginBottom: 10, borderColor: isOpen ? "#10B98130" : "#E2E8F0" }}>
+                    <div key={ct.id} style={{ ...S.card, padding: "20px 22px", position: "relative", overflow: "hidden", marginBottom: 10, borderColor: isOpen ? "#10B98130" : "#E2E8F0" }}>
                       {isOpen && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg,#10B981,#34D399)" }} />}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
                         <div style={{ flex: 1 }}>
@@ -470,8 +444,8 @@ export default function AdminPage() {
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                           <button onClick={() => { setEditingContest(ct); setEditContestValues({ name: ct.name, startDate: ct.startDate ? new Date(ct.startDate).toISOString().split("T")[0] : "", endDate: ct.endDate ? new Date(ct.endDate).toISOString().split("T")[0] : "" }); }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #6366F130", background: "#6366F110", color: "#6366F1", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>✏️ Modifier</button>
                           {isOpen
-                            ? <button onClick={async () => { if (!confirm("Fermer ce concours ?")) return; try { await api.patch(`/admin/contest/${<ct.id>}/close`); toast.success("Concours fermé"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #EF444430", background: "#EF444410", color: "#EF4444", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Fermer</button>
-                            : <button onClick={async () => { try { await api.patch(`/admin/contest/${<ct.id>}/open`); toast.success("Concours ouvert ✓"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #10B98130", background: "#10B98110", color: "#10B981", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Ouvrir</button>
+                            ? <button onClick={async () => { if (!confirm("Fermer ce concours ?")) return; try { await api.patch(`/admin/contest/${ct.id}/close`); toast.success("Concours fermé"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #EF444430", background: "#EF444410", color: "#EF4444", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Fermer</button>
+                            : <button onClick={async () => { try { await api.patch(`/admin/contest/${ct.id}/open`); toast.success("Concours ouvert ✓"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #10B98130", background: "#10B98110", color: "#10B981", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Ouvrir</button>
                           }
                         </div>
                       </div>
@@ -480,7 +454,6 @@ export default function AdminPage() {
                 })}
               </div>
 
-              {/* Section réseaux sociaux */}
               <div style={{ ...S.card, padding: "24px 22px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                   <Globe size={20} color="#6366F1" />
@@ -489,12 +462,12 @@ export default function AdminPage() {
                 <p style={{ fontSize: 13, color: "#94A3B8", marginBottom: 20 }}>Ces liens seront affichés sur la page Support pour les visiteurs.</p>
                 <div style={{ display: "grid", gap: 14 }}>
                   {[
-                    { key: "whatsappGroup", label: "WhatsApp — Groupe", placeholder: "<https://chat.whatsapp.com/>...", emoji: "💬" },
-                    { key: "whatsappChannel", label: "WhatsApp — Chaîne", placeholder: "<https://whatsapp.com/channel/>...", emoji: "📢" },
-                    { key: "tiktok", label: "TikTok", placeholder: "<https://tiktok.com/@>...", emoji: "🎵" },
-                    { key: "youtube", label: "YouTube", placeholder: "<https://youtube.com/>...", emoji: "▶️" },
-                    { key: "snapchat", label: "Snapchat", placeholder: "<https://snapchat.com/add/>...", emoji: "👻" },
-                    { key: "telegram", label: "Telegram", placeholder: "<https://t.me/>...", emoji: "✈️" },
+                    { key: "whatsappGroup", label: "WhatsApp — Groupe", placeholder: "https://chat.whatsapp.com/...", emoji: "💬" },
+                    { key: "whatsappChannel", label: "WhatsApp — Chaîne", placeholder: "https://whatsapp.com/channel/...", emoji: "📢" },
+                    { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@...", emoji: "🎵" },
+                    { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/...", emoji: "▶️" },
+                    { key: "snapchat", label: "Snapchat", placeholder: "https://snapchat.com/add/...", emoji: "👻" },
+                    { key: "telegram", label: "Telegram", placeholder: "https://t.me/...", emoji: "✈️" },
                   ].map(field => (
                     <div key={field.key}>
                       <label style={S.lbl}>{field.emoji} {field.label}</label>
@@ -509,11 +482,10 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ── USERS ── */}
           {tab === "users" && (
             <div style={{ display: "grid", gap: 10 }}>
               {users.map(u => (
-                <div key={<u.id>} style={{ ...S.card, padding: "14px 18px" }}>
+                <div key={u.id} style={{ ...S.card, padding: "14px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 14 }}>{u.name}</div>
@@ -526,7 +498,7 @@ export default function AdminPage() {
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       <button onClick={() => { setEditingUser(u); setEditUserValues({ name: u.name||"", email: u.email||"", role: u.role||"USER" }); }} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #E2E8F0", background: "#F8FAFF", cursor: "pointer", display: "grid", placeItems: "center" }}><Edit3 size={15} color="#6366F1" /></button>
-                      <button onClick={async () => { if (!confirm(`Supprimer ${u.name} ?`)) return; try { await api.delete(`/admin/users/${<u.id>}`); toast.success("Supprimé"); load(); } catch { toast.error("Erreur"); } }} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #FEE2E2", background: "#FFF5F5", cursor: "pointer", display: "grid", placeItems: "center" }}><Trash2 size={15} color="#EF4444" /></button>
+                      <button onClick={async () => { if (!confirm(`Supprimer ${u.name} ?`)) return; try { await api.delete(`/admin/users/${u.id}`); toast.success("Supprimé"); load(); } catch { toast.error("Erreur"); } }} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #FEE2E2", background: "#FFF5F5", cursor: "pointer", display: "grid", placeItems: "center" }}><Trash2 size={15} color="#EF4444" /></button>
                     </div>
                   </div>
                 </div>
@@ -536,7 +508,6 @@ export default function AdminPage() {
         </>)}
       </main>
 
-      {/* ── MODAL VOIR CANDIDAT ── */}
       {viewingCandidate && (
         <div className="amodal-backdrop" onClick={() => setViewingCandidate(null)}>
           <div className="amodal" onClick={e => e.stopPropagation()}>
@@ -571,31 +542,29 @@ export default function AdminPage() {
               <button style={{ flex: 1, fontSize: "0.82rem", background: "#2563EB", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => handleCandidatePdf(viewingCandidate)}><FileDown size={15} /> PDF</button>
               <button className="btn-blue" style={{ flex: 1, fontSize: "0.82rem", background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }} onClick={() => { setViewingCandidate(null); openEdit(viewingCandidate); }}>✏️ Modifier</button>
               {viewingCandidate.status === "PENDING" && (
-                <button style={{ flex: 1, fontSize: "0.82rem", background: "#10B981", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { approve(<viewingCandidate.id>); setViewingCandidate(null); }}>✓ Approuver</button>
+                <button style={{ flex: 1, fontSize: "0.82rem", background: "#10B981", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { approve(viewingCandidate.id); setViewingCandidate(null); }}>✓ Approuver</button>
               )}
             </div>
             {viewingCandidate.status === "PENDING" && (
-              <button style={{ width: "100%", marginTop: 8, fontSize: "0.82rem", background: "#FEF2F2", color: "#EF4444", border: "1.5px solid #FECACA", borderRadius: 12, padding: "11px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { reject(<viewingCandidate.id>); setViewingCandidate(null); }}>✕ Rejeter la candidature</button>
+              <button style={{ width: "100%", marginTop: 8, fontSize: "0.82rem", background: "#FEF2F2", color: "#EF4444", border: "1.5px solid #FECACA", borderRadius: 12, padding: "11px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { reject(viewingCandidate.id); setViewingCandidate(null); }}>✕ Rejeter la candidature</button>
             )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── MODAL EDIT/CREATE CANDIDAT ── */}
       {editingCandidate !== null && (
         <div className="amodal-backdrop" onClick={() => setEditingCandidate(null)}>
           <div className="amodal" onClick={e => e.stopPropagation()}>
             <div className="amodal-head">
               <div>
                 <h3>{isCreating ? "Ajouter un candidat" : "Modifier la candidature"}</h3>
-                {!isCreating && <p className="sub">ID {<editingCandidate.id>}</p>}
+                {!isCreating && <p className="sub">ID {editingCandidate.id}</p>}
               </div>
               <button className="amodal-close" onClick={() => setEditingCandidate(null)}>×</button>
             </div>
             <div className="amodal-body">
 
-            {/* Photo */}
             <input ref={photoInputRef} type="file" accept="image/*" onChange={e => { const f=e.target.files?.[0]; if(f){setPhotoFile(f);setPhotoPreview(URL.createObjectURL(f));} }} style={{ display: "none" }} />
             <div onClick={() => photoInputRef.current?.click()} style={{ width: "100%", height: 160, borderRadius: 14, overflow: "hidden", position: "relative", background: photoPreview ? "transparent" : "#F8FAFF", border: photoPreview ? "none" : "2px dashed #CBD5E1", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", marginBottom: 18 }}>
               {photoPreview ? <Image src={photoPreview} alt="preview" fill style={{ objectFit: "cover" }} /> : <div style={{ textAlign: "center", color: "#94A3B8" }}><Camera size={28} style={{ marginBottom: 6 }} /><div style={{ fontSize: 13 }}>Ajouter une photo</div></div>}
@@ -603,7 +572,6 @@ export default function AdminPage() {
             </div>
 
             <div style={{ display: "grid", gap: 12 }}>
-              {/* Grille infos */}
               <div>
                 <label style={S.lbl}>Nom complet *</label>
                 <input value={editValues.name} onChange={e => setEditValues({...editValues,name:e.target.value})} placeholder="Nom complet" style={S.inp} />
@@ -655,7 +623,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── MODAL EDIT USER ── */}
       {editingUser && (
         <div className="amodal-backdrop" onClick={() => setEditingUser(null)}>
           <div className="amodal" onClick={e => e.stopPropagation()}>
@@ -677,7 +644,7 @@ export default function AdminPage() {
               <div style={{ padding: "10px 14px", borderRadius: 10, background: "#F8FAFF", border: "1px solid #E2E8F0", fontSize: 13, color: "#64748B" }}>
                 🗳 Votes effectués : <strong>{editingUser.totalVotes ?? editingUser._count?.votes ?? 0}</strong>
               </div>
-              <button disabled={editUserSaving} onClick={async () => { setEditUserSaving(true); try { await api.patch(`/admin/users/${<editingUser.id>}`, editUserValues); toast.success("Mis à jour ✓"); setEditingUser(null); load(); } catch { toast.error("Erreur"); } setEditUserSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: editUserSaving ? 0.6 : 1, fontFamily: "inherit" }}>
+              <button disabled={editUserSaving} onClick={async () => { setEditUserSaving(true); try { await api.patch(`/admin/users/${editingUser.id}`, editUserValues); toast.success("Mis à jour ✓"); setEditingUser(null); load(); } catch { toast.error("Erreur"); } setEditUserSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: editUserSaving ? 0.6 : 1, fontFamily: "inherit" }}>
                 {editUserSaving ? "Enregistrement..." : "✓ Enregistrer"}
               </button>
             </div>
@@ -686,7 +653,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── MODAL EDIT CONCOURS ── */}
       {editingContest && (
         <div className="amodal-backdrop" onClick={() => setEditingContest(null)}>
           <div className="amodal" onClick={e => e.stopPropagation()}>
@@ -703,7 +669,7 @@ export default function AdminPage() {
                 <input type="date" value={editContestValues.endDate} onChange={e => setEditContestValues({...editContestValues,endDate:e.target.value})} style={S.inp} />
                 {editContestValues.endDate && <button onClick={() => setEditContestValues({...editContestValues,endDate:""})} style={{ marginTop: 4, fontSize: 11, color: "#EF4444", background: "none", border: "none", cursor: "pointer" }}>× Supprimer date fin</button>}
               </div>
-              <button disabled={editContestSaving} onClick={async () => { setEditContestSaving(true); try { await api.patch(`/admin/contest/${<editingContest.id>}`, { name: editContestValues.name, startDate: editContestValues.startDate, endDate: editContestValues.endDate||null }); toast.success("Mis à jour ✓"); setEditingContest(null); load(); } catch { toast.error("Erreur"); } setEditContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
+              <button disabled={editContestSaving} onClick={async () => { setEditContestSaving(true); try { await api.patch(`/admin/contest/${editingContest.id}`, { name: editContestValues.name, startDate: editContestValues.startDate, endDate: editContestValues.endDate||null }); toast.success("Mis à jour ✓"); setEditingContest(null); load(); } catch { toast.error("Erreur"); } setEditContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
                 {editContestSaving ? "Enregistrement..." : "✓ Enregistrer"}
               </button>
             </div>
@@ -712,7 +678,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── MODAL CRÉER CONCOURS ── */}
       {showCreateContest && (
         <div className="amodal-backdrop" onClick={() => setShowCreateContest(false)}>
           <div className="amodal" onClick={e => e.stopPropagation()}>
@@ -743,8 +708,6 @@ export default function AdminPage() {
           .admin-main-content { margin-left: 260px; }
         }
         .admin-input { width:100%;padding:12px 14px;border:1.5px solid #E2E8F0;border-radius:12px;font-size:14px;outline:none;font-family:inherit;background:#F8FAFF;color:#0F172A;box-sizing:border-box; }
-
-        /* ── Cartes stats compactes ── */
         .admin-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         @media (min-width: 560px) { .admin-stats { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
         @media (min-width: 1100px) { .admin-stats { grid-template-columns: repeat(6, 1fr); } }
@@ -752,8 +715,6 @@ export default function AdminPage() {
         .admin-stat-c .ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 10px; }
         .admin-stat-c .v { font-size: 1.35rem; font-weight: 800; color: #0F172A; line-height: 1.05; word-break: break-word; }
         .admin-stat-c .l { margin-top: 4px; font-size: 0.7rem; color: #94A3B8; line-height: 1.25; }
-
-        /* ── Liste candidats (style fiche) ── */
         .acand-row { display: flex; align-items: stretch; padding: 0 !important; overflow: hidden; }
         .acand-main { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; cursor: pointer; padding: 12px 14px; }
         .acand-photo { width: 58px; height: 64px; border-radius: 12px; overflow: hidden; background: #EFF6FF; position: relative; flex-shrink: 0; }
@@ -768,8 +729,6 @@ export default function AdminPage() {
         .acand-actions button { flex: 1; width: 50px; border: none; background: #fff; cursor: pointer; display: grid; place-items: center; border-bottom: 1px solid #EEF1F6; transition: background 0.15s; }
         .acand-actions button:last-child { border-bottom: none; }
         .acand-actions button:hover { background: #F8FAFF; }
-
-        /* ── Admin modals : flottant au centre, scrollable ── */
         .amodal-backdrop {
           position: fixed; inset: 0; z-index: 300;
           background: rgba(15,23,42,0.55); backdrop-filter: blur(4px);
