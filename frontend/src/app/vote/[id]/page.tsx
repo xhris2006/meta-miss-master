@@ -76,9 +76,10 @@ export default function VoteByIdPage() {
   const [step, setStep] = useState<Step>("form");
   const [loading, setLoading] = useState(false);
   const [cooldownLeft, setCooldownLeft] = useState(0);
+  const [doubleVotes, setDoubleVotes] = useState(false);
   const cooldownInterval = useRef<NodeJS.Timeout | null>(null);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "<http://localhost:5000>";
 
   useEffect(() => {
     if (user) {
@@ -94,6 +95,13 @@ export default function VoteByIdPage() {
       .then((r) => setCandidate(r.data.data))
       .catch(() => router.push("/candidates"));
   }, [id, router]);
+
+  // État de la promo "votes doubles" (pour la bannière).
+  useEffect(() => {
+    api.get("/settings/double-votes")
+      .then((r) => setDoubleVotes(r.data?.data?.enabled === true))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -132,13 +140,14 @@ export default function VoteByIdPage() {
   };
 
   const votes = Math.floor(amount / 100);
-  const selectedMethod = METHODS.find((m) => m.id === method) || METHODS[0];
+  const effectiveVotes = doubleVotes ? votes * 2 : votes;
+  const selectedMethod = METHODS.find((m) => <m.id> === method) || METHODS[0];
   const fee = computeFee(amount, selectedMethod.feePercent, selectedMethod.feeFixed);
   const totalToPay = amount + fee;
   const countryOptions = selectedMethod.region ? COUNTRY_GROUPS[selectedMethod.region] || [] : [];
 
   const handleMethod = (m: (typeof METHODS)[number]) => {
-    setMethod(m.id);
+    setMethod(<m.id>);
     if (m.region === "cards") {
       setCountry("FR"); // carte internationale par défaut
     } else if (m.region && COUNTRY_GROUPS[m.region]?.length) {
@@ -161,7 +170,7 @@ export default function VoteByIdPage() {
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      const selected = METHODS.find((m) => m.id === method) || METHODS[0];
+      const selected = METHODS.find((m) => <m.id> === method) || METHODS[0];
       const feeAmount = computeFee(amount, selected.feePercent, selected.feeFixed);
       const { data } = await api.post("/payments/initialize", {
         candidateId: id,
@@ -210,8 +219,18 @@ export default function VoteByIdPage() {
     color: C.inputText, background: C.inputBg, outline: "none", marginBottom: 12,
   };
 
+  // Bannière "votes doubles" réutilisable.
+  const DoubleBanner = () => doubleVotes ? (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, background: "linear-gradient(135deg,#059669,#10B981)", color: "#fff", borderRadius: 12, padding: "12px 14px", marginBottom: 16, boxShadow: "0 4px 16px rgba(16,185,129,0.3)" }}>
+      <span style={{ fontSize: "1.35rem", lineHeight: 1 }}>⚡</span>
+      <div style={{ fontSize: "0.8rem", fontWeight: 700, lineHeight: 1.3 }}>
+        Votes doubles actifs ! Vos votes comptent <strong>×2</strong> pour ce candidat.
+      </div>
+    </div>
+  ) : null;
+
   if (!candidate) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: C.bg }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: <C.bg> }}>
       <div style={{ width: 32, height: 32, border: `3px solid ${C.blueBg}`, borderTopColor: C.blue, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
     </div>
   );
@@ -220,7 +239,7 @@ export default function VoteByIdPage() {
 
   /* ── COOLDOWN ── */
   if (step === "cooldown") return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center", minHeight: "100vh", background: C.bg, color: C.text }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center", minHeight: "100vh", background: <C.bg>, color: C.text }}>
       <div style={{ width: 88, height: 88, borderRadius: "50%", background: C.blueBg, border: `2px solid ${C.blue}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
         <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="2">
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -250,15 +269,15 @@ export default function VoteByIdPage() {
 
   /* ── CONFIRM ── */
   if (step === "confirm") return (
-    <div className="page-content fade-up" style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px 80px", textAlign: "center", background: C.bg, minHeight: "100dvh", color: C.text }}>
-      <div className="top-bar" style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: C.bg }}>
+    <div className="page-content fade-up" style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px 80px", textAlign: "center", background: <C.bg>, minHeight: "100dvh", color: C.text }}>
+      <div className="top-bar" style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: <C.bg> }}>
         <button onClick={() => setStep("form")} style={{ width: 32, height: 32, border: `1px solid ${C.border}`, borderRadius: 8, background: C.card, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
         <span className="top-bar-title" style={{ color: C.text }}>{t.voteTitle}</span>
         <div style={{ width: 32 }} />
       </div>
-      <div style={{ marginTop: 60 }}>
+      <div style={{ marginTop: 60, width: "100%", maxWidth: 430 }}>
         <div style={{ width: 72, height: 72, borderRadius: "50%", background: C.blueBg, border: `2px solid ${C.blueBorder}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="2">
             <path d="M9 12l2 2 4-4"/><rect x="3" y="4" width="18" height="16" rx="2"/>
@@ -266,6 +285,7 @@ export default function VoteByIdPage() {
         </div>
         <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: C.text, marginBottom: 6 }}>{t.confirmVote}</h2>
         <p style={{ fontSize: "0.84rem", color: C.muted, marginBottom: 24 }}>{t.aboutToVoteFor}</p>
+        <DoubleBanner />
         <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 28, textAlign: "left" }}>
           <img src={photo} alt={candidate.name} className="avatar" style={{ width: 52, height: 52 }} />
           <div>
@@ -276,7 +296,9 @@ export default function VoteByIdPage() {
         </div>
         <div style={{ background: C.blueBg, border: `1px solid ${C.blueBorder}`, borderRadius: 10, padding: "12px 16px", marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.82rem", color: C.muted }}>{votes} {t.voteWord || "vote"}{votes > 1 ? "s" : ""}</span>
+            <span style={{ fontSize: "0.82rem", color: C.muted }}>
+              {effectiveVotes} {t.voteWord || "vote"}{effectiveVotes > 1 ? "s" : ""}{doubleVotes ? " (×2)" : ""}
+            </span>
             <span style={{ fontSize: "0.9rem", fontWeight: 700, color: C.blue }}>{amount.toLocaleString("fr-FR")} FCFA</span>
           </div>
           {fee > 0 && (
@@ -307,7 +329,7 @@ export default function VoteByIdPage() {
 
   /* ── SUCCESS ── */
   if (step === "success") return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center", minHeight: "100vh", background: C.bg, color: C.text }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center", minHeight: "100vh", background: <C.bg>, color: C.text }}>
       <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", boxShadow: "0 8px 32px rgba(37,99,235,0.35)" }} className="scale-in">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
       </div>
@@ -329,8 +351,8 @@ export default function VoteByIdPage() {
 
   /* ── FORM ── */
   return (
-    <div className="page-content fade-up" style={{ background: C.bg, minHeight: "100dvh", color: C.text }}>
-      <div className="top-bar" style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+    <div className="page-content fade-up" style={{ background: <C.bg>, minHeight: "100dvh", color: C.text }}>
+      <div className="top-bar" style={{ background: <C.bg>, borderBottom: `1px solid ${C.border}` }}>
         <button onClick={() => router.back()} style={{ width: 32, height: 32, border: `1px solid ${C.border}`, borderRadius: 8, background: C.card, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
@@ -339,6 +361,9 @@ export default function VoteByIdPage() {
       </div>
 
       <div style={{ padding: "0 16px 24px" }}>
+        {/* Bannière votes doubles */}
+        <div style={{ marginTop: 16 }}><DoubleBanner /></div>
+
         {/* Candidate */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.blueBg, border: `1px solid ${C.blueBorder}`, borderRadius: 12, padding: "14px", marginBottom: 20 }}>
           <img src={photo} alt={candidate.name} className="avatar" style={{ width: 52, height: 52 }} />
@@ -387,7 +412,9 @@ export default function VoteByIdPage() {
 
         {/* Summary */}
         <div style={{ background: C.blueBg, border: `1px solid ${C.blueBorder}`, borderRadius: 10, padding: "12px 14px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "0.82rem", color: C.muted }}>{votes} {t.voteWord || "vote"}{votes > 1 ? "s" : ""}</span>
+          <span style={{ fontSize: "0.82rem", color: C.muted }}>
+            {effectiveVotes} {t.voteWord || "vote"}{effectiveVotes > 1 ? "s" : ""}{doubleVotes ? " (×2)" : ""}
+          </span>
           <span style={{ fontSize: "0.9rem", fontWeight: 700, color: C.blue }}>{amount.toLocaleString("fr-FR")} FCFA</span>
         </div>
 
@@ -395,11 +422,11 @@ export default function VoteByIdPage() {
         <div style={{ fontSize: "0.75rem", fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{t.payment}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
           {METHODS.map(m => {
-            const selected = method === m.id;
+            const selected = method === <m.id>;
             const subLabel = (t as any)[m.subKey] || m.sub;
             const badgeLabel = (t as any)[m.badgeKey] || m.badge;
             return (
-              <button key={m.id} onClick={() => handleMethod(m)} style={{
+              <button key={<m.id>} onClick={() => handleMethod(m)} style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 padding: "12px 14px", borderRadius: 14,
                 border: `1.5px solid ${selected ? C.blue : C.inputBorder}`,
@@ -444,7 +471,9 @@ export default function VoteByIdPage() {
         {fee > 0 && (
           <div style={{ background: C.blueBg, border: `1px solid ${C.blueBorder}`, borderRadius: 10, padding: "12px 14px", marginBottom: 18 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <span style={{ fontSize: "0.8rem", color: C.muted }}>{votes} {t.voteWord || "vote"}{votes > 1 ? "s" : ""}</span>
+              <span style={{ fontSize: "0.8rem", color: C.muted }}>
+                {effectiveVotes} {t.voteWord || "vote"}{effectiveVotes > 1 ? "s" : ""}{doubleVotes ? " (×2)" : ""}
+              </span>
               <span style={{ fontSize: "0.82rem", color: C.text }}>{amount.toLocaleString("fr-FR")} FCFA</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
