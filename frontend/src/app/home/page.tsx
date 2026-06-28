@@ -12,7 +12,7 @@ export default function HomeDashboardPage() {
   const [contest, setContest] = useState<any>(null);
   const [loadingCandidates, setLoadingCandidates] = useState(true);
   const [doubleVotes, setDoubleVotes] = useState(false);
-  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "<http://localhost:5000>";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000";
 
   useEffect(() => {
     api.get("/ranking/stats").then((r) => setStats(r.data.data)).catch(() => {});
@@ -52,7 +52,7 @@ export default function HomeDashboardPage() {
            HOME PAGE — REDESIGN
         ═══════════════════════════════════ */
 
-        /* Bannière votes doubles */
+        /* Banniere votes doubles */
         .home-double {
           margin: 0 16px 20px;
           background: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%);
@@ -134,7 +134,7 @@ export default function HomeDashboardPage() {
         }
         .home-hero-cta:hover { background: rgba(255,255,255,0.28); }
 
-        /* Hero image — hidden on mobile, shown on tablet+ */
+        /* Hero image */
         .home-hero-img {
           display: none;
           position: absolute;
@@ -317,7 +317,7 @@ export default function HomeDashboardPage() {
           border-radius: 100px;
         }
 
-        /* Scroll arrows — tablet/desktop only */
+        /* Scroll arrows */
         .home-cand-scroll-wrap {
           position: relative;
         }
@@ -397,7 +397,7 @@ export default function HomeDashboardPage() {
         }
       `}</style>
 
-      {/* ── BANNIÈRE VOTES DOUBLES ── */}
+      {/* Banniere votes doubles */}
       {doubleVotes && (
         <div className="home-double">
           <span className="ic">⚡</span>
@@ -408,7 +408,7 @@ export default function HomeDashboardPage() {
         </div>
       )}
 
-      {/* ── HERO BANNER ── */}
+      {/* HERO BANNER */}
       <div className="home-hero">
         <div className="home-hero-bg-circle" style={{ width: 220, height: 220, top: -60, right: -40 }} />
         <div className="home-hero-bg-circle" style={{ width: 120, height: 120, bottom: -40, left: 80 }} />
@@ -431,7 +431,7 @@ export default function HomeDashboardPage() {
         </div>
       </div>
 
-      {/* ── STATS GRID ── */}
+      {/* STATS GRID */}
       <div className="home-stats-grid">
         {/* Candidats */}
         <div className="home-stat-card">
@@ -494,7 +494,7 @@ export default function HomeDashboardPage() {
         </div>
       </div>
 
-      {/* ── TOP CANDIDATES ── */}
+      {/* TOP CANDIDATES */}
       <div className="home-section-hd">
         <span className="home-section-title">{t.topCandidates || "Top candidates"}</span>
         <Link href="/candidates" className="home-see-all">
@@ -540,7 +540,7 @@ export default function HomeDashboardPage() {
                 const rankColor = i === 0 ? "#F59E0B" : i === 1 ? "#9CA3AF" : i === 2 ? "#D97706" : "var(--blue)";
                 const vDisplay = (c.totalVotes || 0) >= 1000 ? `${((c.totalVotes || 0) / 1000).toFixed(1)}K` : String(c.totalVotes || 0);
                 return (
-                  <Link key={<c.id>} href={`/candidates/${<c.id>}`} className="home-cand-card fade-up" style={{ animationDelay: `${i * 0.06}s` }}>
+                  <Link key={c.id} href={`/candidates/${c.id}`} className="home-cand-card fade-up" style={{ animationDelay: `${i * 0.06}s` }}>
                     <div className="home-cand-img-wrap">
                       <img src={photo} alt={c.name}
                         onError={(e: any) => { e.target.src = "/placeholder-avatar.svg"; e.target.onerror = null; }} />
@@ -563,7 +563,6 @@ export default function HomeDashboardPage() {
                 );
               })}
             </div>
-            {/* Scroll arrows (tablet/desktop) */}
             <button className="home-scroll-arrow left"
               onClick={() => { const el = document.getElementById("home-cand-scroll"); if (el) el.scrollBy({ left: -280, behavior: "smooth" }); }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" strokeWidth="2.5">
@@ -580,7 +579,7 @@ export default function HomeDashboardPage() {
         );
       })()}
 
-      {/* ── BOTTOM CTA ── */}
+      {/* BOTTOM CTA */}
       <div className="home-cta-banner">
         <div className="home-cta-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
