@@ -63,7 +63,11 @@ export default function AdminPage() {
   const [socialSaving, setSocialSaving] = useState(false);
   const [socialLoaded, setSocialLoaded] = useState(false);
 
-  const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
+  /* votes doubles */
+  const [doubleVotes, setDoubleVotes] = useState(false);
+  const [doubleSaving, setDoubleSaving] = useState(false);
+
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || "<http://localhost:5000/api>").replace("/api", "");
 
   useEffect(() => {
     if (!hasHydrated) return; // attendre la relecture de la session avant de décider
@@ -74,18 +78,20 @@ export default function AdminPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [s, c, p, u, ct] = await Promise.all([
+      const [s, c, p, u, ct, dv] = await Promise.all([
         api.get("/admin/stats"),
         api.get("/admin/candidates?limit=100"),
         api.get("/admin/payments?limit=50"),
         api.get("/admin/users?limit=50"),
         api.get("/admin/contests").catch(() => ({ data: { data: [] } })),
+        api.get("/admin/double-votes").catch(() => ({ data: { data: { enabled: false } } })),
       ]);
       setStats(s.data.data);
       setCandidates(c.data.data.candidates || []);
       setPayments(p.data.data.payments || []);
       setUsers(u.data.data.users || []);
       setContests(ct.data.data || []);
+      setDoubleVotes(dv.data?.data?.enabled === true);
     } catch { toast.error("Erreur chargement"); }
     setLoading(false);
   };
@@ -116,6 +122,23 @@ export default function AdminPage() {
     } catch { toast.error("Erreur lors de la réinitialisation"); }
   };
 
+  // Active/désactive la promo "votes doubles".
+  const toggleDoubleVotes = async () => {
+    const next = !doubleVotes;
+    setDoubleSaving(true);
+    setDoubleVotes(next); // optimiste
+    try {
+      const res = await api.put("/admin/double-votes", { enabled: next });
+      setDoubleVotes(res.data?.data?.enabled ?? next);
+      toast.success(res.data?.message || (next ? "Votes doubles activés ✓" : "Votes doubles désactivés"));
+    } catch {
+      setDoubleVotes(!next); // rollback
+      toast.error("Erreur");
+    } finally {
+      setDoubleSaving(false);
+    }
+  };
+
   const openEdit = (c: any) => {
     setIsCreating(false); setEditingCandidate(c);
     setEditValues({ name: c.name||"", city: c.city||"", age: String(c.age||""), bio: c.bio||"", type: c.type||"MISS", status: c.status||"PENDING", instagram: c.instagram||"", tiktok: c.tiktok||"", snap: c.snap||"", whatsappFan: c.whatsappFan||"", phone: c.phone||"", email: c.email||"" });
@@ -141,7 +164,7 @@ export default function AdminPage() {
       });
       if (photoFile) fd.append("photo", photoFile);
       if (isCreating) { await api.post("/admin/candidates", fd, { headers: { "Content-Type": "multipart/form-data" } }); toast.success("Candidat ajouté ✓"); }
-      else { await api.patch(`/admin/candidates/${editingCandidate.id}`, fd, { headers: { "Content-Type": "multipart/form-data" } }); toast.success("Mis à jour ✓"); }
+      else { await api.patch(`/admin/candidates/${<editingCandidate.id>}`, fd, { headers: { "Content-Type": "multipart/form-data" } }); toast.success("Mis à jour ✓"); }
       setEditingCandidate(null); load();
     } catch { toast.error("Erreur d'enregistrement"); }
     setSaving(false);
@@ -161,7 +184,7 @@ export default function AdminPage() {
 
   /* ── PDF exports ── */
   const [exportingTx, setExportingTx] = useState(false);
-  const candidateNameById: Record<string, string> = Object.fromEntries(candidates.map((c: any) => [c.id, c.name]));
+  const candidateNameById: Record<string, string> = Object.fromEntries(candidates.map((c: any) => [<c.id>, c.name]));
 
   const handleCandidatePdf = async (c: any) => {
     try { await downloadCandidatePdf(c, apiBase); toast.success("PDF généré ✓"); }
@@ -229,11 +252,11 @@ export default function AdminPage() {
     { Icon: XCircle, val: stats.pendingCandidates, label: "Candidatures en attente", color: "#F59E0B" },
     { Icon: CreditCard, val: stats.completedPayments, label: "Paiements complétés", color: "#2563EB" },
     { Icon: LayoutDashboard, val: stats.totalCandidates, label: "Candidats approuvés", color: "#8B5CF6" },
-    { Icon: Trophy, val: ((stats.revenue||0)/1000).toFixed(0) + "k FCFA", label: "Revenus totaux", color: "#10B981" },
+    { Icon: Trophy, val: (stats.revenue || 0).toLocaleString("fr-FR") + " FCFA", label: "Revenus totaux", color: "#10B981" },
   ] : [];
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: S.bg, fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: <S.bg>, fontFamily: "system-ui,sans-serif" }}>
 
       {/* Desktop sidebar */}
       <aside className="admin-desktop-sidebar" style={{ display: "none", flexDirection: "column", gap: 16, position: "fixed", top: 0, left: 0, bottom: 0, width: 260, background: "#fff", borderRight: "1px solid #E2E8F0", padding: "28px 18px", zIndex: 50 }}>
@@ -285,6 +308,30 @@ export default function AdminPage() {
                 ))}
               </div>
 
+              {/* Votes doubles (promo) */}
+              <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", borderColor: doubleVotes ? "#10B98155" : "#E2E8F0", background: doubleVotes ? "#F0FDF4" : "#fff" }}>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+                    ⚡ Votes doubles
+                    {doubleVotes && <span style={S.pill("#10B981")}>ACTIF</span>}
+                  </div>
+                  <p style={{ color: "#64748B", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+                    Quand activé, chaque vote payé compte <strong>×2</strong> pour le candidat
+                    (le prix payé ne change pas). S'applique aux votes lancés pendant que l'option est active.
+                  </p>
+                </div>
+                <button
+                  onClick={toggleDoubleVotes}
+                  disabled={doubleSaving}
+                  role="switch"
+                  aria-checked={doubleVotes}
+                  title={doubleVotes ? "Désactiver" : "Activer"}
+                  style={{ position: "relative", width: 58, height: 32, borderRadius: 100, border: "none", cursor: doubleSaving ? "wait" : "pointer", background: doubleVotes ? "#10B981" : "#CBD5E1", transition: "background .2s", flexShrink: 0, opacity: doubleSaving ? 0.6 : 1 }}
+                >
+                  <span style={{ position: "absolute", top: 3, left: doubleVotes ? 29 : 3, width: 26, height: 26, borderRadius: "50%", background: "#fff", transition: "left .2s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }} />
+                </button>
+              </div>
+
               {/* Zone dangereuse : reset des votes */}
               <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", borderColor: "#FECACA", background: "#FFFCFC" }}>
                 <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4 }}>⚠️ Zone dangereuse</div>
@@ -305,7 +352,7 @@ export default function AdminPage() {
               {candidates.map((c, i) => {
                 const photo = c.photoUrl?.startsWith("http") ? c.photoUrl : `${apiBase}${c.photoUrl}`;
                 return (
-                  <div key={c.id} className="acand-row" style={{ ...S.card }}>
+                  <div key={<c.id>} className="acand-row" style={{ ...S.card }}>
                     <div className="acand-main" onClick={() => setViewingCandidate(c)}>
                       <div className="acand-photo">
                         <Image src={photo} alt={c.name} fill style={{ objectFit: "cover" }} onError={(e: any) => { e.target.style.display = "none"; }} />
@@ -325,9 +372,9 @@ export default function AdminPage() {
                     <div className="acand-actions">
                       <button onClick={() => openEdit(c)} title="Modifier"><Edit3 size={16} color="#6366F1" /></button>
                       {c.status === "PENDING"
-                        ? <button onClick={() => approve(c.id)} title="Approuver"><CheckCircle2 size={16} color="#10B981" /></button>
+                        ? <button onClick={() => approve(<c.id>)} title="Approuver"><CheckCircle2 size={16} color="#10B981" /></button>
                         : <button onClick={() => handleCandidatePdf(c)} title="Fiche PDF"><FileDown size={16} color="#2563EB" /></button>}
-                      <button onClick={() => del(c.id)} title="Supprimer"><Trash2 size={16} color="#EF4444" /></button>
+                      <button onClick={() => del(<c.id>)} title="Supprimer"><Trash2 size={16} color="#EF4444" /></button>
                     </div>
                   </div>
                 );
@@ -359,7 +406,7 @@ export default function AdminPage() {
                 const candName = p.candidateName || candidateNameById[p.candidateId] || "—";
                 const phone = p.user?.phone || p.metadata?.phone || p.metadata?.phone_number || "—";
                 return (
-                  <div key={p.id} style={{ ...S.card, padding: "16px 20px" }}>
+                  <div key={<p.id>} style={{ ...S.card, padding: "16px 20px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, alignItems: "flex-start" }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 14 }}>{p.user?.name || "—"}</div>
@@ -407,7 +454,7 @@ export default function AdminPage() {
                 ) : contests.map((ct: any) => {
                   const isOpen = ct.status === "OPEN";
                   return (
-                    <div key={ct.id} style={{ ...S.card, padding: "20px 22px", position: "relative", overflow: "hidden", marginBottom: 10, borderColor: isOpen ? "#10B98130" : "#E2E8F0" }}>
+                    <div key={<ct.id>} style={{ ...S.card, padding: "20px 22px", position: "relative", overflow: "hidden", marginBottom: 10, borderColor: isOpen ? "#10B98130" : "#E2E8F0" }}>
                       {isOpen && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg,#10B981,#34D399)" }} />}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
                         <div style={{ flex: 1 }}>
@@ -423,8 +470,8 @@ export default function AdminPage() {
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                           <button onClick={() => { setEditingContest(ct); setEditContestValues({ name: ct.name, startDate: ct.startDate ? new Date(ct.startDate).toISOString().split("T")[0] : "", endDate: ct.endDate ? new Date(ct.endDate).toISOString().split("T")[0] : "" }); }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #6366F130", background: "#6366F110", color: "#6366F1", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>✏️ Modifier</button>
                           {isOpen
-                            ? <button onClick={async () => { if (!confirm("Fermer ce concours ?")) return; try { await api.patch(`/admin/contest/${ct.id}/close`); toast.success("Concours fermé"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #EF444430", background: "#EF444410", color: "#EF4444", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Fermer</button>
-                            : <button onClick={async () => { try { await api.patch(`/admin/contest/${ct.id}/open`); toast.success("Concours ouvert ✓"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #10B98130", background: "#10B98110", color: "#10B981", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Ouvrir</button>
+                            ? <button onClick={async () => { if (!confirm("Fermer ce concours ?")) return; try { await api.patch(`/admin/contest/${<ct.id>}/close`); toast.success("Concours fermé"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #EF444430", background: "#EF444410", color: "#EF4444", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Fermer</button>
+                            : <button onClick={async () => { try { await api.patch(`/admin/contest/${<ct.id>}/open`); toast.success("Concours ouvert ✓"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #10B98130", background: "#10B98110", color: "#10B981", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Ouvrir</button>
                           }
                         </div>
                       </div>
@@ -442,12 +489,12 @@ export default function AdminPage() {
                 <p style={{ fontSize: 13, color: "#94A3B8", marginBottom: 20 }}>Ces liens seront affichés sur la page Support pour les visiteurs.</p>
                 <div style={{ display: "grid", gap: 14 }}>
                   {[
-                    { key: "whatsappGroup", label: "WhatsApp — Groupe", placeholder: "https://chat.whatsapp.com/...", emoji: "💬" },
-                    { key: "whatsappChannel", label: "WhatsApp — Chaîne", placeholder: "https://whatsapp.com/channel/...", emoji: "📢" },
-                    { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@...", emoji: "🎵" },
-                    { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/...", emoji: "▶️" },
-                    { key: "snapchat", label: "Snapchat", placeholder: "https://snapchat.com/add/...", emoji: "👻" },
-                    { key: "telegram", label: "Telegram", placeholder: "https://t.me/...", emoji: "✈️" },
+                    { key: "whatsappGroup", label: "WhatsApp — Groupe", placeholder: "<https://chat.whatsapp.com/>...", emoji: "💬" },
+                    { key: "whatsappChannel", label: "WhatsApp — Chaîne", placeholder: "<https://whatsapp.com/channel/>...", emoji: "📢" },
+                    { key: "tiktok", label: "TikTok", placeholder: "<https://tiktok.com/@>...", emoji: "🎵" },
+                    { key: "youtube", label: "YouTube", placeholder: "<https://youtube.com/>...", emoji: "▶️" },
+                    { key: "snapchat", label: "Snapchat", placeholder: "<https://snapchat.com/add/>...", emoji: "👻" },
+                    { key: "telegram", label: "Telegram", placeholder: "<https://t.me/>...", emoji: "✈️" },
                   ].map(field => (
                     <div key={field.key}>
                       <label style={S.lbl}>{field.emoji} {field.label}</label>
@@ -466,7 +513,7 @@ export default function AdminPage() {
           {tab === "users" && (
             <div style={{ display: "grid", gap: 10 }}>
               {users.map(u => (
-                <div key={u.id} style={{ ...S.card, padding: "14px 18px" }}>
+                <div key={<u.id>} style={{ ...S.card, padding: "14px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 14 }}>{u.name}</div>
@@ -479,7 +526,7 @@ export default function AdminPage() {
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       <button onClick={() => { setEditingUser(u); setEditUserValues({ name: u.name||"", email: u.email||"", role: u.role||"USER" }); }} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #E2E8F0", background: "#F8FAFF", cursor: "pointer", display: "grid", placeItems: "center" }}><Edit3 size={15} color="#6366F1" /></button>
-                      <button onClick={async () => { if (!confirm(`Supprimer ${u.name} ?`)) return; try { await api.delete(`/admin/users/${u.id}`); toast.success("Supprimé"); load(); } catch { toast.error("Erreur"); } }} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #FEE2E2", background: "#FFF5F5", cursor: "pointer", display: "grid", placeItems: "center" }}><Trash2 size={15} color="#EF4444" /></button>
+                      <button onClick={async () => { if (!confirm(`Supprimer ${u.name} ?`)) return; try { await api.delete(`/admin/users/${<u.id>}`); toast.success("Supprimé"); load(); } catch { toast.error("Erreur"); } }} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #FEE2E2", background: "#FFF5F5", cursor: "pointer", display: "grid", placeItems: "center" }}><Trash2 size={15} color="#EF4444" /></button>
                     </div>
                   </div>
                 </div>
@@ -524,11 +571,11 @@ export default function AdminPage() {
               <button style={{ flex: 1, fontSize: "0.82rem", background: "#2563EB", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => handleCandidatePdf(viewingCandidate)}><FileDown size={15} /> PDF</button>
               <button className="btn-blue" style={{ flex: 1, fontSize: "0.82rem", background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }} onClick={() => { setViewingCandidate(null); openEdit(viewingCandidate); }}>✏️ Modifier</button>
               {viewingCandidate.status === "PENDING" && (
-                <button style={{ flex: 1, fontSize: "0.82rem", background: "#10B981", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { approve(viewingCandidate.id); setViewingCandidate(null); }}>✓ Approuver</button>
+                <button style={{ flex: 1, fontSize: "0.82rem", background: "#10B981", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { approve(<viewingCandidate.id>); setViewingCandidate(null); }}>✓ Approuver</button>
               )}
             </div>
             {viewingCandidate.status === "PENDING" && (
-              <button style={{ width: "100%", marginTop: 8, fontSize: "0.82rem", background: "#FEF2F2", color: "#EF4444", border: "1.5px solid #FECACA", borderRadius: 12, padding: "11px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { reject(viewingCandidate.id); setViewingCandidate(null); }}>✕ Rejeter la candidature</button>
+              <button style={{ width: "100%", marginTop: 8, fontSize: "0.82rem", background: "#FEF2F2", color: "#EF4444", border: "1.5px solid #FECACA", borderRadius: 12, padding: "11px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { reject(<viewingCandidate.id>); setViewingCandidate(null); }}>✕ Rejeter la candidature</button>
             )}
             </div>
           </div>
@@ -542,7 +589,7 @@ export default function AdminPage() {
             <div className="amodal-head">
               <div>
                 <h3>{isCreating ? "Ajouter un candidat" : "Modifier la candidature"}</h3>
-                {!isCreating && <p className="sub">ID {editingCandidate.id}</p>}
+                {!isCreating && <p className="sub">ID {<editingCandidate.id>}</p>}
               </div>
               <button className="amodal-close" onClick={() => setEditingCandidate(null)}>×</button>
             </div>
@@ -578,7 +625,7 @@ export default function AdminPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
                   <label style={S.lbl}>Type</label>
-                  <select value={editValues.type} onChange={e => setEditValues({...editValues,type:e.target.value})} style={S.inp}><option value="MISS">MISS</option></select>
+                  <select value={editValues.type} onChange={e => setEditValues({...editValues,type:e.target.value})} style={S.inp}><option value="MISS">MISS</option><option value="MASTER">MASTER</option></select>
                 </div>
                 <div>
                   <label style={S.lbl}>Statut</label>
@@ -630,7 +677,7 @@ export default function AdminPage() {
               <div style={{ padding: "10px 14px", borderRadius: 10, background: "#F8FAFF", border: "1px solid #E2E8F0", fontSize: 13, color: "#64748B" }}>
                 🗳 Votes effectués : <strong>{editingUser.totalVotes ?? editingUser._count?.votes ?? 0}</strong>
               </div>
-              <button disabled={editUserSaving} onClick={async () => { setEditUserSaving(true); try { await api.patch(`/admin/users/${editingUser.id}`, editUserValues); toast.success("Mis à jour ✓"); setEditingUser(null); load(); } catch { toast.error("Erreur"); } setEditUserSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: editUserSaving ? 0.6 : 1, fontFamily: "inherit" }}>
+              <button disabled={editUserSaving} onClick={async () => { setEditUserSaving(true); try { await api.patch(`/admin/users/${<editingUser.id>}`, editUserValues); toast.success("Mis à jour ✓"); setEditingUser(null); load(); } catch { toast.error("Erreur"); } setEditUserSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: editUserSaving ? 0.6 : 1, fontFamily: "inherit" }}>
                 {editUserSaving ? "Enregistrement..." : "✓ Enregistrer"}
               </button>
             </div>
@@ -656,7 +703,7 @@ export default function AdminPage() {
                 <input type="date" value={editContestValues.endDate} onChange={e => setEditContestValues({...editContestValues,endDate:e.target.value})} style={S.inp} />
                 {editContestValues.endDate && <button onClick={() => setEditContestValues({...editContestValues,endDate:""})} style={{ marginTop: 4, fontSize: 11, color: "#EF4444", background: "none", border: "none", cursor: "pointer" }}>× Supprimer date fin</button>}
               </div>
-              <button disabled={editContestSaving} onClick={async () => { setEditContestSaving(true); try { await api.patch(`/admin/contest/${editingContest.id}`, { name: editContestValues.name, startDate: editContestValues.startDate, endDate: editContestValues.endDate||null }); toast.success("Mis à jour ✓"); setEditingContest(null); load(); } catch { toast.error("Erreur"); } setEditContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
+              <button disabled={editContestSaving} onClick={async () => { setEditContestSaving(true); try { await api.patch(`/admin/contest/${<editingContest.id>}`, { name: editContestValues.name, startDate: editContestValues.startDate, endDate: editContestValues.endDate||null }); toast.success("Mis à jour ✓"); setEditingContest(null); load(); } catch { toast.error("Erreur"); } setEditContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
                 {editContestSaving ? "Enregistrement..." : "✓ Enregistrer"}
               </button>
             </div>
