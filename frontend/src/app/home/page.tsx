@@ -11,11 +11,13 @@ export default function HomeDashboardPage() {
   const [topMiss, setTopMiss] = useState<any[]>([]);
   const [contest, setContest] = useState<any>(null);
   const [loadingCandidates, setLoadingCandidates] = useState(true);
-  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000";
+  const [doubleVotes, setDoubleVotes] = useState(false);
+  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "<http://localhost:5000>";
 
   useEffect(() => {
     api.get("/ranking/stats").then((r) => setStats(r.data.data)).catch(() => {});
     api.get("/contest/active").then((r) => setContest(r.data.data)).catch(() => {});
+    api.get("/settings/double-votes").then((r) => setDoubleVotes(r.data?.data?.enabled === true)).catch(() => {});
     api.get("/candidates/top?type=MISS&limit=10")
       .then((r) => setTopMiss(r.data.data || []))
       .catch(() => {})
@@ -49,6 +51,23 @@ export default function HomeDashboardPage() {
         /* ═══════════════════════════════════
            HOME PAGE — REDESIGN
         ═══════════════════════════════════ */
+
+        /* Bannière votes doubles */
+        .home-double {
+          margin: 0 16px 20px;
+          background: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%);
+          border-radius: 16px;
+          padding: 14px 18px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          color: #fff;
+          box-shadow: 0 6px 24px rgba(16,185,129,0.35);
+        }
+        @media (min-width: 1024px) { .home-double { margin: 0 0 20px; } }
+        .home-double .ic { font-size: 1.7rem; line-height: 1; }
+        .home-double .t { font-weight: 800; font-size: 0.95rem; }
+        .home-double .s { font-size: 0.76rem; opacity: 0.92; }
 
         /* Hero banner */
         .home-hero {
@@ -378,6 +397,17 @@ export default function HomeDashboardPage() {
         }
       `}</style>
 
+      {/* ── BANNIÈRE VOTES DOUBLES ── */}
+      {doubleVotes && (
+        <div className="home-double">
+          <span className="ic">⚡</span>
+          <div>
+            <div className="t">Votes doubles activés !</div>
+            <div className="s">Pendant la promo, chaque vote compte ×2 pour votre candidat·e.</div>
+          </div>
+        </div>
+      )}
+
       {/* ── HERO BANNER ── */}
       <div className="home-hero">
         <div className="home-hero-bg-circle" style={{ width: 220, height: 220, top: -60, right: -40 }} />
@@ -510,7 +540,7 @@ export default function HomeDashboardPage() {
                 const rankColor = i === 0 ? "#F59E0B" : i === 1 ? "#9CA3AF" : i === 2 ? "#D97706" : "var(--blue)";
                 const vDisplay = (c.totalVotes || 0) >= 1000 ? `${((c.totalVotes || 0) / 1000).toFixed(1)}K` : String(c.totalVotes || 0);
                 return (
-                  <Link key={c.id} href={`/candidates/${c.id}`} className="home-cand-card fade-up" style={{ animationDelay: `${i * 0.06}s` }}>
+                  <Link key={<c.id>} href={`/candidates/${<c.id>}`} className="home-cand-card fade-up" style={{ animationDelay: `${i * 0.06}s` }}>
                     <div className="home-cand-img-wrap">
                       <img src={photo} alt={c.name}
                         onError={(e: any) => { e.target.src = "/placeholder-avatar.svg"; e.target.onerror = null; }} />
