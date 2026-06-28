@@ -12,10 +12,8 @@ const PRESETS = [100, 500, 1000, 5000];
 const LAST_VOTE_KEY = (candidateId: string) => `mmm-last-vote-${candidateId}`;
 const COOLDOWN_MS = 30 * 1000;
 
-// Méthodes affichées à l'utilisateur.
+// Methodes affichees a l'utilisateur.
 // Orange & MTN passent par Fapshi. Afrique / Europe / Cartes passent par GeniusPay.
-// feePercent + feeFixed = frais GeniusPay (opérateur + 1% GeniusPay + 100 XOF)
-// répercutés sur le votant. fee = 0 → aucun frais ajouté (Fapshi).
 const METHODS = [
   { id: "orange", provider: "fapshi", region: null, label: "Orange Money", subKey: "payMobile", sub: "Paiement mobile", img: "/pay/orange-money.svg", badgeKey: "recommended", badge: "Recommandé", badgeColor: "#FF7900", feePercent: 0, feeFixed: 0 },
   { id: "mtn", provider: "fapshi", region: null, label: "MTN Mobile Money", subKey: "payMobile", sub: "Paiement mobile", img: "/pay/mtn-momo.svg", badgeKey: "recommended", badge: "Recommandé", badgeColor: "#16a34a", feePercent: 0, feeFixed: 0 },
@@ -24,7 +22,7 @@ const METHODS = [
   { id: "cards", provider: "geniuspay", region: "cards", label: "Cartes", subKey: "payCards", sub: "Carte bancaire · Visa, Mastercard", img: null, badgeKey: "badgeCards", badge: "💳 Carte bancaire", badgeColor: "#7C3AED", feePercent: 6, feeFixed: 100 },
 ];
 
-// Pays proposés selon la région du mode de paiement choisi.
+// Pays proposes selon la region du mode de paiement choisi.
 const COUNTRY_GROUPS: Record<string, { code: string; label: string }[]> = {
   africa: [
     { code: "CI", label: "Côte d'Ivoire" },
@@ -49,7 +47,7 @@ const COUNTRY_GROUPS: Record<string, { code: string; label: string }[]> = {
   cards: [],
 };
 
-// Frais GeniusPay répercutés sur le votant (arrondi au FCFA supérieur).
+// Frais GeniusPay repercutes sur le votant (arrondi au FCFA superieur).
 function computeFee(amount: number, feePercent: number, feeFixed: number) {
   if (!feePercent && !feeFixed) return 0;
   return Math.ceil((amount * feePercent) / 100) + feeFixed;
@@ -79,7 +77,7 @@ export default function VoteByIdPage() {
   const [doubleVotes, setDoubleVotes] = useState(false);
   const cooldownInterval = useRef<NodeJS.Timeout | null>(null);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "<http://localhost:5000>";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000";
 
   useEffect(() => {
     if (user) {
@@ -96,7 +94,7 @@ export default function VoteByIdPage() {
       .catch(() => router.push("/candidates"));
   }, [id, router]);
 
-  // État de la promo "votes doubles" (pour la bannière).
+  // Etat de la promo "votes doubles" (pour la banniere).
   useEffect(() => {
     api.get("/settings/double-votes")
       .then((r) => setDoubleVotes(r.data?.data?.enabled === true))
@@ -141,15 +139,15 @@ export default function VoteByIdPage() {
 
   const votes = Math.floor(amount / 100);
   const effectiveVotes = doubleVotes ? votes * 2 : votes;
-  const selectedMethod = METHODS.find((m) => <m.id> === method) || METHODS[0];
+  const selectedMethod = METHODS.find((m) => m.id === method) || METHODS[0];
   const fee = computeFee(amount, selectedMethod.feePercent, selectedMethod.feeFixed);
   const totalToPay = amount + fee;
   const countryOptions = selectedMethod.region ? COUNTRY_GROUPS[selectedMethod.region] || [] : [];
 
   const handleMethod = (m: (typeof METHODS)[number]) => {
-    setMethod(<m.id>);
+    setMethod(m.id);
     if (m.region === "cards") {
-      setCountry("FR"); // carte internationale par défaut
+      setCountry("FR");
     } else if (m.region && COUNTRY_GROUPS[m.region]?.length) {
       setCountry(COUNTRY_GROUPS[m.region][0].code);
     }
@@ -170,15 +168,15 @@ export default function VoteByIdPage() {
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      const selected = METHODS.find((m) => <m.id> === method) || METHODS[0];
+      const selected = METHODS.find((m) => m.id === method) || METHODS[0];
       const feeAmount = computeFee(amount, selected.feePercent, selected.feeFixed);
       const { data } = await api.post("/payments/initialize", {
         candidateId: id,
         amount,
-        feeAmount, // frais répercutés sur le votant (0 pour Fapshi)
-        provider: selected.provider, // fapshi (Orange/MTN) ou geniuspay (Afrique/Europe/Cartes)
-        operator: selected.provider === "fapshi" ? method : undefined, // orange | mtn
-        region: selected.region || undefined, // africa | europe | cards
+        feeAmount,
+        provider: selected.provider,
+        operator: selected.provider === "fapshi" ? method : undefined,
+        region: selected.region || undefined,
         country,
         voterName,
         voterEmail,
@@ -219,7 +217,6 @@ export default function VoteByIdPage() {
     color: C.inputText, background: C.inputBg, outline: "none", marginBottom: 12,
   };
 
-  // Bannière "votes doubles" réutilisable.
   const DoubleBanner = () => doubleVotes ? (
     <div style={{ display: "flex", alignItems: "center", gap: 10, background: "linear-gradient(135deg,#059669,#10B981)", color: "#fff", borderRadius: 12, padding: "12px 14px", marginBottom: 16, boxShadow: "0 4px 16px rgba(16,185,129,0.3)" }}>
       <span style={{ fontSize: "1.35rem", lineHeight: 1 }}>⚡</span>
@@ -230,16 +227,16 @@ export default function VoteByIdPage() {
   ) : null;
 
   if (!candidate) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: <C.bg> }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: C.bg }}>
       <div style={{ width: 32, height: 32, border: `3px solid ${C.blueBg}`, borderTopColor: C.blue, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
     </div>
   );
 
   const photo = candidate.photoUrl?.startsWith("http") ? candidate.photoUrl : `${apiBase}${candidate.photoUrl}`;
 
-  /* ── COOLDOWN ── */
+  /* COOLDOWN */
   if (step === "cooldown") return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center", minHeight: "100vh", background: <C.bg>, color: C.text }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center", minHeight: "100vh", background: C.bg, color: C.text }}>
       <div style={{ width: 88, height: 88, borderRadius: "50%", background: C.blueBg, border: `2px solid ${C.blue}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
         <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="2">
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -263,14 +260,13 @@ export default function VoteByIdPage() {
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         {t.voteConfidential}
       </div>
-
     </div>
   );
 
-  /* ── CONFIRM ── */
+  /* CONFIRM */
   if (step === "confirm") return (
-    <div className="page-content fade-up" style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px 80px", textAlign: "center", background: <C.bg>, minHeight: "100dvh", color: C.text }}>
-      <div className="top-bar" style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: <C.bg> }}>
+    <div className="page-content fade-up" style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px 80px", textAlign: "center", background: C.bg, minHeight: "100dvh", color: C.text }}>
+      <div className="top-bar" style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: C.bg }}>
         <button onClick={() => setStep("form")} style={{ width: 32, height: 32, border: `1px solid ${C.border}`, borderRadius: 8, background: C.card, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
@@ -323,13 +319,12 @@ export default function VoteByIdPage() {
           {t.voteConfidential}
         </div>
       </div>
-
     </div>
   );
 
-  /* ── SUCCESS ── */
+  /* SUCCESS */
   if (step === "success") return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center", minHeight: "100vh", background: <C.bg>, color: C.text }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center", minHeight: "100vh", background: C.bg, color: C.text }}>
       <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", boxShadow: "0 8px 32px rgba(37,99,235,0.35)" }} className="scale-in">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
       </div>
@@ -349,10 +344,10 @@ export default function VoteByIdPage() {
     </div>
   );
 
-  /* ── FORM ── */
+  /* FORM */
   return (
-    <div className="page-content fade-up" style={{ background: <C.bg>, minHeight: "100dvh", color: C.text }}>
-      <div className="top-bar" style={{ background: <C.bg>, borderBottom: `1px solid ${C.border}` }}>
+    <div className="page-content fade-up" style={{ background: C.bg, minHeight: "100dvh", color: C.text }}>
+      <div className="top-bar" style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
         <button onClick={() => router.back()} style={{ width: 32, height: 32, border: `1px solid ${C.border}`, borderRadius: 8, background: C.card, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
@@ -361,7 +356,6 @@ export default function VoteByIdPage() {
       </div>
 
       <div style={{ padding: "0 16px 24px" }}>
-        {/* Bannière votes doubles */}
         <div style={{ marginTop: 16 }}><DoubleBanner /></div>
 
         {/* Candidate */}
@@ -373,7 +367,7 @@ export default function VoteByIdPage() {
           </div>
         </div>
 
-        {/* Voter info — pré-rempli depuis le compte */}
+        {/* Voter info */}
         <div style={{ fontSize: "0.75rem", fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{t.yourInfo}</div>
         <input style={inputStyle} placeholder={t.fullNamePlaceholder} value={voterName} onChange={e => setVoterName(e.target.value)} />
         <input style={inputStyle} type="email" placeholder={t.emailPlaceholder} value={voterEmail} onChange={e => setVoterEmail(e.target.value)} />
@@ -418,15 +412,15 @@ export default function VoteByIdPage() {
           <span style={{ fontSize: "0.9rem", fontWeight: 700, color: C.blue }}>{amount.toLocaleString("fr-FR")} FCFA</span>
         </div>
 
-        {/* Méthode de paiement */}
+        {/* Methode de paiement */}
         <div style={{ fontSize: "0.75rem", fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{t.payment}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
           {METHODS.map(m => {
-            const selected = method === <m.id>;
+            const selected = method === m.id;
             const subLabel = (t as any)[m.subKey] || m.sub;
             const badgeLabel = (t as any)[m.badgeKey] || m.badge;
             return (
-              <button key={<m.id>} onClick={() => handleMethod(m)} style={{
+              <button key={m.id} onClick={() => handleMethod(m)} style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 padding: "12px 14px", borderRadius: 14,
                 border: `1.5px solid ${selected ? C.blue : C.inputBorder}`,
@@ -455,7 +449,7 @@ export default function VoteByIdPage() {
           })}
         </div>
 
-        {/* Sélection du pays selon la région (Afrique / Europe). Les cartes sont internationales. */}
+        {/* Selection du pays */}
         {countryOptions.length > 0 && (
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: "0.75rem", fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
@@ -467,7 +461,7 @@ export default function VoteByIdPage() {
           </div>
         )}
 
-        {/* Frais répercutés sur le votant (modes GeniusPay uniquement) */}
+        {/* Frais repercutes (modes GeniusPay) */}
         {fee > 0 && (
           <div style={{ background: C.blueBg, border: `1px solid ${C.blueBorder}`, borderRadius: 10, padding: "12px 14px", marginBottom: 18 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -506,7 +500,6 @@ export default function VoteByIdPage() {
           {t.voteConfidential}
         </div>
       </div>
-
     </div>
   );
 }
