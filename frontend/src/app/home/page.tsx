@@ -11,13 +11,11 @@ export default function HomeDashboardPage() {
   const [topMiss, setTopMiss] = useState<any[]>([]);
   const [contest, setContest] = useState<any>(null);
   const [loadingCandidates, setLoadingCandidates] = useState(true);
-  const [doubleVotes, setDoubleVotes] = useState(false);
   const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000";
 
   useEffect(() => {
     api.get("/ranking/stats").then((r) => setStats(r.data.data)).catch(() => {});
     api.get("/contest/active").then((r) => setContest(r.data.data)).catch(() => {});
-    api.get("/settings/double-votes").then((r) => setDoubleVotes(r.data?.data?.enabled === true)).catch(() => {});
     api.get("/candidates/top?type=MISS&limit=10")
       .then((r) => setTopMiss(r.data.data || []))
       .catch(() => {})
@@ -396,17 +394,6 @@ export default function HomeDashboardPage() {
           .home-cta-btn { margin-left: 0; width: 100%; justify-content: center; }
         }
       `}</style>
-
-      {/* Banniere votes doubles */}
-      {doubleVotes && (
-        <div className="home-double">
-          <span className="ic">⚡</span>
-          <div>
-            <div className="t">Votes doubles activés !</div>
-            <div className="s">Pendant la promo, chaque vote compte ×2 pour votre candidat·e.</div>
-          </div>
-        </div>
-      )}
 
       {/* HERO BANNER */}
       <div className="home-hero">
