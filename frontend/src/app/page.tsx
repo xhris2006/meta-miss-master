@@ -1,5 +1,7 @@
 "use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import api from "@/lib/api";
 import LandingCandidates from "@/components/LandingCandidates";
 import LangSelector from "@/components/ui/LangSelector";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -7,6 +9,14 @@ import { useT } from "@/store/langStore";
 
 export default function LandingPage() {
   const t = useT();
+  const [doubleVotes, setDoubleVotes] = useState(false);
+
+  useEffect(() => {
+    api.get("/settings/double-votes")
+      .then((r) => setDoubleVotes(r.data?.data?.enabled === true))
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="page-content fade-up">
       <style>{`
@@ -108,6 +118,17 @@ export default function LandingPage() {
         <div className="lp-eyebrow">{t.lpEyebrow}</div>
         <h1 className="lp-title">{t.lpTitleA} <span>{t.lpTitleB}</span> {t.lpTitleC}</h1>
         <p className="lp-sub">{t.lpSub}</p>
+
+        {/* Bannière votes doubles (promo activée par l'admin) */}
+        {doubleVotes && (
+          <div style={{ display: "flex", alignItems: "center", gap: 11, background: "linear-gradient(135deg,#059669,#10B981 55%,#34D399)", color: "#fff", borderRadius: 16, padding: "13px 16px", marginBottom: 16, boxShadow: "0 6px 22px rgba(16,185,129,0.35)" }}>
+            <span style={{ fontSize: "1.6rem", lineHeight: 1 }}>⚡</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: "0.92rem" }}>Votes doubles activés !</div>
+              <div style={{ fontSize: "0.74rem", opacity: 0.92 }}>Pendant la promo, chaque vote compte ×2 pour votre candidate.</div>
+            </div>
+          </div>
+        )}
 
         {/* Bandeau défilant des candidates (boucle infinie, mis à jour automatiquement) */}
         <LandingCandidates />
