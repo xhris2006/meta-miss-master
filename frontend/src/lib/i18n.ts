@@ -150,6 +150,8 @@ export const translations = {
     worldwide: "🌍 Monde entier",
     country: "Pays",
     geniusNote: "Genius Pay choisit automatiquement le meilleur moyen de paiement disponible dans votre pays — partout dans le monde.",
+    payCameroon: "Orange Money · MTN Mobile Money",
+    preciseAggNote: "Paiement mobile direct (Orange · MTN) — sans frais de service",
     // Modes de paiement régionaux
     payAfrica: "Mobile Money · Wave, MTN, Orange, Moov…",
     payEurope: "Carte & wallets internationaux · Visa, Apple Pay, Google Pay",
@@ -333,6 +335,8 @@ export const translations = {
     worldwide: "🌍 Worldwide",
     country: "Country",
     geniusNote: "Genius Pay automatically selects the best payment method available in your country — anywhere in the world.",
+    payCameroon: "Orange Money · MTN Mobile Money",
+    preciseAggNote: "Direct mobile payment (Orange · MTN) — no service fee",
     // Regional payment methods
     payAfrica: "Mobile Money · Wave, MTN, Orange, Moov…",
     payEurope: "International cards & wallets · Visa, Apple Pay, Google Pay",

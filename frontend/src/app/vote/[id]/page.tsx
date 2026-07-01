@@ -13,25 +13,40 @@ const LAST_VOTE_KEY = (candidateId: string) => `mmm-last-vote-${candidateId}`;
 const COOLDOWN_MS = 30 * 1000;
 
 // Methodes affichees a l'utilisateur.
-// Orange & MTN passent par Fapshi. Afrique / Europe / Cartes passent par GeniusPay.
+// Cameroun (Orange + MTN) passe par l'agregateur precis (Fapshi).
+// Afrique / Europe / Cartes passent par GeniusPay — SAUF Cameroun & Gabon
+// selectionnes dans "Afrique", qui sont redirigees vers l'agregateur precis.
 const METHODS = [
-  { id: "orange", provider: "fapshi", region: null, label: "Orange Money", subKey: "payMobile", sub: "Paiement mobile", img: "/pay/orange-money.svg", badgeKey: "recommended", badge: "Recommandé", badgeColor: "#FF7900", feePercent: 0, feeFixed: 0 },
-  { id: "mtn", provider: "fapshi", region: null, label: "MTN Mobile Money", subKey: "payMobile", sub: "Paiement mobile", img: "/pay/mtn-momo.svg", badgeKey: "recommended", badge: "Recommandé", badgeColor: "#16a34a", feePercent: 0, feeFixed: 0 },
-  { id: "africa", provider: "geniuspay", region: "africa", label: "Afrique", subKey: "payAfrica", sub: "Mobile Money · Wave, MTN, Orange, Moov…", img: null, badgeKey: "badgeAfrica", badge: "🌍 20+ pays africains", badgeColor: "#16a34a", feePercent: 4.5, feeFixed: 100 },
-  { id: "europe", provider: "geniuspay", region: "europe", label: "Europe", subKey: "payEurope", sub: "Carte & wallets internationaux · Visa, Apple Pay, Google Pay", img: null, badgeKey: "badgeEurope", badge: "🇪🇺 International", badgeColor: "#2563EB", feePercent: 6, feeFixed: 100 },
-  { id: "cards", provider: "geniuspay", region: "cards", label: "Cartes", subKey: "payCards", sub: "Carte bancaire · Visa, Mastercard", img: null, badgeKey: "badgeCards", badge: "💳 Carte bancaire", badgeColor: "#7C3AED", feePercent: 6, feeFixed: 100 },
+  { id: "cameroon", provider: "fapshi", region: null, label: "Cameroun", subKey: "payCameroon", sub: "Orange Money · MTN Mobile Money", img: null, imgs: ["/pay/orange-money.svg", "/pay/mtn-momo.svg"], badgeKey: "recommended", badge: "Recommandé", badgeColor: "#16a34a", feePercent: 0, feeFixed: 0 },
+  { id: "africa", provider: "geniuspay", region: "africa", label: "Afrique", subKey: "payAfrica", sub: "Mobile Money · Wave, MTN, Orange, Moov…", img: null, imgs: null, badgeKey: "badgeAfrica", badge: "🌍 20+ pays africains", badgeColor: "#16a34a", feePercent: 4.5, feeFixed: 100 },
+  { id: "europe", provider: "geniuspay", region: "europe", label: "Europe", subKey: "payEurope", sub: "Carte & wallets internationaux · Visa, Apple Pay, Google Pay", img: null, imgs: null, badgeKey: "badgeEurope", badge: "🇪🇺 International", badgeColor: "#2563EB", feePercent: 6, feeFixed: 100 },
+  { id: "cards", provider: "geniuspay", region: "cards", label: "Cartes", subKey: "payCards", sub: "Carte bancaire · Visa, Mastercard", img: null, imgs: null, badgeKey: "badgeCards", badge: "💳 Carte bancaire", badgeColor: "#7C3AED", feePercent: 6, feeFixed: 100 },
 ];
+
+// Pays d'Afrique routes vers l'agregateur precis (Fapshi) au lieu de GeniusPay.
+// Cameroun (CM) & Gabon (GA) : paiement mobile via l'agregateur dedie, sans frais.
+const PRECISE_AGGREGATOR_COUNTRIES = ["CM", "GA"];
+
+// Determine le provider effectif selon la methode ET le pays choisi.
+function resolveProvider(methodId: string, countryCode: string) {
+  const m = METHODS.find((x) => x.id === methodId);
+  if (!m) return "fapshi";
+  if (m.id === "cameroon") return "fapshi";
+  if (m.region === "africa" && PRECISE_AGGREGATOR_COUNTRIES.includes(countryCode)) return "fapshi";
+  return m.provider;
+}
 
 // Pays proposes selon la region du mode de paiement choisi.
 const COUNTRY_GROUPS: Record<string, { code: string; label: string }[]> = {
   africa: [
+    { code: "CM", label: "Cameroun" },
+    { code: "GA", label: "Gabon" },
     { code: "CI", label: "Côte d'Ivoire" },
     { code: "SN", label: "Sénégal" },
     { code: "ML", label: "Mali" },
     { code: "BF", label: "Burkina Faso" },
     { code: "BJ", label: "Bénin" },
     { code: "TG", label: "Togo" },
-    { code: "CM", label: "Cameroun" },
     { code: "GH", label: "Ghana" },
     { code: "NG", label: "Nigeria" },
   ],
@@ -66,7 +81,7 @@ export default function VoteByIdPage() {
   const [candidate, setCandidate] = useState<any>(null);
   const [amount, setAmount] = useState(500);
   const [customAmount, setCustomAmount] = useState("500");
-  const [method, setMethod] = useState("orange");
+  const [method, setMethod] = useState("cameroon");
   const [country, setCountry] = useState("CI");
   const [voterName, setVoterName] = useState("");
   const [voterEmail, setVoterEmail] = useState("");
@@ -140,7 +155,10 @@ export default function VoteByIdPage() {
   const votes = Math.floor(amount / 100);
   const effectiveVotes = doubleVotes ? votes * 2 : votes;
   const selectedMethod = METHODS.find((m) => m.id === method) || METHODS[0];
-  const fee = computeFee(amount, selectedMethod.feePercent, selectedMethod.feeFixed);
+  // Provider reellement utilise (Cameroun & Gabon d'Afrique => agregateur precis, sans frais).
+  const effectiveProvider = resolveProvider(method, country);
+  const isPreciseAgg = effectiveProvider === "fapshi";
+  const fee = isPreciseAgg ? 0 : computeFee(amount, selectedMethod.feePercent, selectedMethod.feeFixed);
   const totalToPay = amount + fee;
   const countryOptions = selectedMethod.region ? COUNTRY_GROUPS[selectedMethod.region] || [] : [];
 
@@ -169,13 +187,15 @@ export default function VoteByIdPage() {
     setLoading(true);
     try {
       const selected = METHODS.find((m) => m.id === method) || METHODS[0];
-      const feeAmount = computeFee(amount, selected.feePercent, selected.feeFixed);
+      // Le provider depend du pays : Cameroun/Gabon d'Afrique => agregateur precis.
+      const provider = resolveProvider(method, country);
+      // Frais uniquement pour GeniusPay ; l'agregateur precis est sans frais.
+      const feeAmount = provider === "geniuspay" ? computeFee(amount, selected.feePercent, selected.feeFixed) : 0;
       const { data } = await api.post("/payments/initialize", {
         candidateId: id,
         amount,
         feeAmount,
-        provider: selected.provider,
-        operator: selected.provider === "fapshi" ? method : undefined,
+        provider,
         region: selected.region || undefined,
         country,
         voterName,
@@ -428,8 +448,12 @@ export default function VoteByIdPage() {
                 cursor: "pointer", fontFamily: "var(--font)", transition: "all 0.15s",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", minWidth: 0 }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 12, overflow: "hidden", flexShrink: 0, display: "grid", placeItems: "center", background: m.img ? "transparent" : "linear-gradient(135deg,#2563EB,#3B82F6)" }}>
-                    {m.img
+                  <div style={{ width: 46, height: 46, borderRadius: 12, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 3, padding: (m.imgs || m.img) ? 0 : undefined, background: (m.imgs || m.img) ? "transparent" : "linear-gradient(135deg,#2563EB,#3B82F6)" }}>
+                    {m.imgs
+                      ? m.imgs.map((src) => (
+                          <img key={src} src={src} alt={m.label} width={21} height={21} style={{ display: "block", borderRadius: 5, objectFit: "contain" }} />
+                        ))
+                      : m.img
                       ? <img src={m.img} alt={m.label} width={46} height={46} style={{ display: "block", borderRadius: 12 }} />
                       : <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20"/></svg>}
                   </div>
@@ -458,6 +482,11 @@ export default function VoteByIdPage() {
             <select value={country} onChange={e => setCountry(e.target.value)} style={{ ...inputStyle, appearance: "none", MozAppearance: "none", WebkitAppearance: "none" }}>
               {countryOptions.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
             </select>
+            {selectedMethod.region === "africa" && isPreciseAgg && (
+              <p style={{ fontSize: "0.72rem", color: "#16a34a", fontWeight: 600, marginTop: -6, lineHeight: 1.5 }}>
+                ✓ {t.preciseAggNote || "Paiement mobile direct (Orange · MTN) — sans frais de service"}
+              </p>
+            )}
           </div>
         )}
 
@@ -488,7 +517,7 @@ export default function VoteByIdPage() {
           onClick={() => {
             if (!voterName.trim() || !voterEmail.trim()) { toast.error(t.error); return; }
             if (amount < 100 || amount % 100 !== 0) { toast.error(t.amountMultipleError || "Le montant doit être un multiple de 100 FCFA"); return; }
-            if (selectedMethod.provider === "geniuspay" && amount < 200) { toast.error("Montant minimum 200 FCFA (2 votes) pour ce mode de paiement"); return; }
+            if (effectiveProvider === "geniuspay" && amount < 200) { toast.error("Montant minimum 200 FCFA (2 votes) pour ce mode de paiement"); return; }
             setStep("confirm");
           }}
           style={{ opacity: (!voterName.trim() || !voterEmail.trim() || amount < 100) ? 0.5 : 1 }}
