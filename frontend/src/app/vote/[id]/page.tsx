@@ -13,9 +13,11 @@ const LAST_VOTE_KEY = (candidateId: string) => `mmm-last-vote-${candidateId}`;
 const COOLDOWN_MS = 30 * 1000;
 
 // Methodes affichees a l'utilisateur.
-// Cameroun (Orange + MTN) passe par l'agregateur precis (Fapshi).
+// Cameroun (Orange + MTN) passe par l'agregateur precis.
 // Afrique / Europe / Cartes passent par GeniusPay — SAUF Cameroun & Gabon
-// selectionnes dans "Afrique", qui sont redirigees vers l'agregateur precis.
+// selectionnes dans "Afrique", qui sont rediriges vers l'agregateur precis.
+// NB : le provider FINAL (Fapshi ou KPay selon le pays) est re-derive COTE SERVEUR
+// (anti-fraude) ; ici on ne calcule que l'affichage des frais et le montant minimum.
 const METHODS = [
   { id: "cameroon", provider: "fapshi", region: null, label: "Cameroun", subKey: "payCameroon", sub: "Orange Money · MTN Mobile Money", img: null, imgs: ["/pay/orange-money.svg", "/pay/mtn-momo.svg"], badgeKey: "recommended", badge: "Recommandé", badgeColor: "#16a34a", feePercent: 0, feeFixed: 0 },
   { id: "africa", provider: "geniuspay", region: "africa", label: "Afrique", subKey: "payAfrica", sub: "Mobile Money · Wave, MTN, Orange, Moov…", img: null, imgs: null, badgeKey: "badgeAfrica", badge: "🌍 20+ pays africains", badgeColor: "#16a34a", feePercent: 4.5, feeFixed: 100 },
@@ -23,11 +25,13 @@ const METHODS = [
   { id: "cards", provider: "geniuspay", region: "cards", label: "Cartes", subKey: "payCards", sub: "Carte bancaire · Visa, Mastercard", img: null, imgs: null, badgeKey: "badgeCards", badge: "💳 Carte bancaire", badgeColor: "#7C3AED", feePercent: 6, feeFixed: 100 },
 ];
 
-// Pays d'Afrique routes vers l'agregateur precis (Fapshi) au lieu de GeniusPay.
+// Pays d'Afrique routes vers l'agregateur precis au lieu de GeniusPay.
 // Cameroun (CM) & Gabon (GA) : paiement mobile via l'agregateur dedie, sans frais.
 const PRECISE_AGGREGATOR_COUNTRIES = ["CM", "GA"];
 
 // Determine le provider effectif selon la methode ET le pays choisi.
+// "fapshi" signifie ici "agregateur precis, sans frais" — le backend re-derive
+// lui-meme le provider reel (Fapshi pour CM, KPay pour GA) et ignore ce champ.
 function resolveProvider(methodId: string, countryCode: string) {
   const m = METHODS.find((x) => x.id === methodId);
   if (!m) return "fapshi";
