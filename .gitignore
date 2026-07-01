@@ -8,3 +8,7 @@ uploads/
 logs/
 *.log
 .DS_Store
+
+# Next.js / TypeScript build artifacts
+next-env.d.ts
+*.tsbuildinfo
