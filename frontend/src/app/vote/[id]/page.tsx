@@ -82,7 +82,7 @@ export default function VoteByIdPage() {
   const [amount, setAmount] = useState(500);
   const [customAmount, setCustomAmount] = useState("500");
   const [method, setMethod] = useState("cameroon");
-  const [country, setCountry] = useState("CI");
+  const [country, setCountry] = useState("CM");
   const [voterName, setVoterName] = useState("");
   const [voterEmail, setVoterEmail] = useState("");
   const [voterPhone, setVoterPhone] = useState("");
@@ -164,7 +164,9 @@ export default function VoteByIdPage() {
 
   const handleMethod = (m: (typeof METHODS)[number]) => {
     setMethod(m.id);
-    if (m.region === "cards") {
+    if (m.id === "cameroon") {
+      setCountry("CM");
+    } else if (m.region === "cards") {
       setCountry("FR");
     } else if (m.region && COUNTRY_GROUPS[m.region]?.length) {
       setCountry(COUNTRY_GROUPS[m.region][0].code);
@@ -187,8 +189,10 @@ export default function VoteByIdPage() {
     setLoading(true);
     try {
       const selected = METHODS.find((m) => m.id === method) || METHODS[0];
+      // La methode "Cameroun" n'a pas de selecteur de pays : on force CM.
+      const effectiveCountry = selected.region ? country : "CM";
       // Le provider depend du pays : Cameroun/Gabon d'Afrique => agregateur precis.
-      const provider = resolveProvider(method, country);
+      const provider = resolveProvider(method, effectiveCountry);
       // Frais uniquement pour GeniusPay ; l'agregateur precis est sans frais.
       const feeAmount = provider === "geniuspay" ? computeFee(amount, selected.feePercent, selected.feeFixed) : 0;
       const { data } = await api.post("/payments/initialize", {
@@ -197,7 +201,7 @@ export default function VoteByIdPage() {
         feeAmount,
         provider,
         region: selected.region || undefined,
-        country,
+        country: effectiveCountry,
         voterName,
         voterEmail,
         voterPhone,
