@@ -7,15 +7,67 @@ import LangSelector from "@/components/ui/LangSelector";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useT } from "@/store/langStore";
 
+type Countdown = { d: number; h: number; m: number; s: number };
+
 export default function LandingPage() {
   const t = useT();
   const [doubleVotes, setDoubleVotes] = useState(false);
+  const [countdown, setCountdown] = useState<Countdown | null>(null);
+  const [votesOpen, setVotesOpen] = useState(false);
 
   useEffect(() => {
     api.get("/settings/double-votes")
       .then((r) => setDoubleVotes(r.data?.data?.enabled === true))
       .catch(() => {});
   }, []);
+
+  // Compte à rebours jusqu'au début des votes.
+  // On se cale sur l'horloge SERVEUR (serverTime) pour ne pas dépendre d'une
+  // horloge client potentiellement fausse.
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    api.get("/settings/contest")
+      .then((r) => {
+        const c = r.data?.data || {};
+        // Décalage entre l'horloge serveur et l'horloge locale.
+        const offset = c.serverTime
+          ? new Date(c.serverTime).getTime() - Date.now()
+          : 0;
+
+        if (c.open === true) {
+          setVotesOpen(true);
+          setCountdown(null);
+          return;
+        }
+        if (!c.startDate) return;
+
+        const targetMs = new Date(c.startDate).getTime();
+
+        const tick = () => {
+          const now = Date.now() + offset;
+          let diff = Math.floor((targetMs - now) / 1000);
+          if (diff <= 0) {
+            setCountdown(null);
+            setVotesOpen(true);
+            if (timer) clearInterval(timer);
+            return;
+          }
+          const d = Math.floor(diff / 86400); diff -= d * 86400;
+          const h = Math.floor(diff / 3600); diff -= h * 3600;
+          const m = Math.floor(diff / 60); const s = diff - m * 60;
+          setCountdown({ d, h, m, s });
+        };
+
+        tick();
+        timer = setInterval(tick, 1000);
+      })
+      .catch(() => {});
+
+    return () => { if (timer) clearInterval(timer); };
+  }, []);
+
+  const pad = (n: number) => String(n).padStart(2, "0");
 
   return (
     <div className="page-content fade-up">
@@ -54,6 +106,35 @@ export default function LandingPage() {
         .lp-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(37,99,235,0.4); }
         .lp-cta svg { transition: transform 0.2s; }
         .lp-cta:hover svg { transform: translateX(4px); }
+
+        /* ── Compte à rebours du début des votes ── */
+        .lp-countdown {
+          margin: 4px 0 18px; padding: 16px; border-radius: 18px;
+          background: linear-gradient(135deg, #0B1F4D 0%, #15347E 55%, #1D4ED8 100%);
+          box-shadow: 0 10px 26px rgba(11,31,77,0.35);
+        }
+        .lp-cd-label {
+          text-align: center; color: #fff; font-size: 0.78rem; font-weight: 800;
+          letter-spacing: 0.04em; margin-bottom: 12px;
+        }
+        .lp-cd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .lp-cd-box {
+          background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18);
+          border-radius: 12px; padding: 10px 4px; text-align: center;
+        }
+        .lp-cd-num {
+          display: block; font-size: 1.5rem; font-weight: 900; color: #fff;
+          font-variant-numeric: tabular-nums; line-height: 1;
+        }
+        .lp-cd-unit {
+          display: block; margin-top: 5px; font-size: 0.58rem; font-weight: 700;
+          color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 0.08em;
+        }
+        .lp-votes-open {
+          margin: 4px 0 18px; padding: 13px 16px; border-radius: 14px; text-align: center;
+          background: linear-gradient(135deg, #059669, #10B981 55%, #34D399); color: #fff;
+          font-weight: 800; font-size: 0.9rem; box-shadow: 0 6px 22px rgba(16,185,129,0.35);
+        }
 
         .lp-card {
           position: relative; overflow: hidden; margin: 22px 0 18px;
@@ -118,6 +199,24 @@ export default function LandingPage() {
         <div className="lp-eyebrow">{t.lpEyebrow}</div>
         <h1 className="lp-title">{t.lpTitleA} <span>{t.lpTitleB}</span> {t.lpTitleC}</h1>
         <p className="lp-sub">{t.lpSub}</p>
+
+        {/* Compte à rebours : temps restant avant le début des votes */}
+        {countdown && (
+          <div className="lp-countdown">
+            <div className="lp-cd-label">🗳️ Les votes commencent dans</div>
+            <div className="lp-cd-grid">
+              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.d)}</span><span className="lp-cd-unit">Jours</span></div>
+              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.h)}</span><span className="lp-cd-unit">Heures</span></div>
+              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.m)}</span><span className="lp-cd-unit">Min</span></div>
+              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.s)}</span><span className="lp-cd-unit">Sec</span></div>
+            </div>
+          </div>
+        )}
+
+        {/* Votes ouverts (date de début atteinte) */}
+        {votesOpen && (
+          <div className="lp-votes-open">🎉 Les votes sont ouverts !</div>
+        )}
 
         {/* Bannière votes doubles (promo activée par l'admin) */}
         {doubleVotes && (
