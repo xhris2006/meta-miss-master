@@ -16,6 +16,27 @@ type Tab = "overview" | "candidates" | "payments" | "contests" | "users";
 const EMPTY_EDIT = { name: "", city: "", age: "", bio: "", type: "MISS", status: "PENDING", instagram: "", tiktok: "", snap: "", whatsappFan: "", phone: "", email: "" };
 const EMPTY_SOCIAL = { whatsappGroup: "", whatsappChannel: "", tiktok: "", youtube: "", snapchat: "", telegram: "" };
 
+// ── Dates du concours (jour + heure) ────────────────────────────────────────
+// ISO/UTC stocké côté serveur → valeur pour <input type="datetime-local">
+// (heure LOCALE de l'admin, format "YYYY-MM-DDTHH:mm", sans fuseau).
+const toLocalInput = (iso?: string | null) => {
+  if (!iso) return "";
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return "";
+  const off = dt.getTimezoneOffset() * 60000;
+  return new Date(dt.getTime() - off).toISOString().slice(0, 16);
+};
+// Valeur du <input datetime-local> (heure locale) → ISO UTC pour l'API.
+// On envoie l'instant exact : le back fait new Date(iso) sans ambiguïté de fuseau.
+const toISO = (v?: string | null) => {
+  if (!v) return "";
+  const dt = new Date(v);
+  return isNaN(dt.getTime()) ? "" : dt.toISOString();
+};
+// Affichage jour + heure dans la liste des concours.
+const fmtDateTime = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+
 const S = {
   bg: "#F1F5F9",
   card: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 20 } as React.CSSProperties,
@@ -437,12 +458,12 @@ export default function AdminPage() {
                             <span style={S.pill(isOpen?"#10B981":"#64748B")}>{isOpen ? "● OUVERT" : "● FERMÉ"}</span>
                           </div>
                           <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 16, fontSize: 13 }}>
-                            <span><span style={{ color: "#94A3B8" }}>Début : </span><strong>{ct.startDate ? new Date(ct.startDate).toLocaleDateString("fr-FR") : "—"}</strong></span>
-                            <span><span style={{ color: "#94A3B8" }}>Fin : </span><strong>{ct.endDate ? new Date(ct.endDate).toLocaleDateString("fr-FR") : "Indéfinie"}</strong></span>
+                            <span><span style={{ color: "#94A3B8" }}>Début : </span><strong>{ct.startDate ? fmtDateTime(ct.startDate) : "—"}</strong></span>
+                            <span><span style={{ color: "#94A3B8" }}>Fin : </span><strong>{ct.endDate ? fmtDateTime(ct.endDate) : "Indéfinie"}</strong></span>
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <button onClick={() => { setEditingContest(ct); setEditContestValues({ name: ct.name, startDate: ct.startDate ? new Date(ct.startDate).toISOString().split("T")[0] : "", endDate: ct.endDate ? new Date(ct.endDate).toISOString().split("T")[0] : "" }); }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #6366F130", background: "#6366F110", color: "#6366F1", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>✏️ Modifier</button>
+                          <button onClick={() => { setEditingContest(ct); setEditContestValues({ name: ct.name, startDate: toLocalInput(ct.startDate), endDate: toLocalInput(ct.endDate) }); }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #6366F130", background: "#6366F110", color: "#6366F1", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>✏️ Modifier</button>
                           {isOpen
                             ? <button onClick={async () => { if (!confirm("Fermer ce concours ?")) return; try { await api.patch(`/admin/contest/${ct.id}/close`); toast.success("Concours fermé"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #EF444430", background: "#EF444410", color: "#EF4444", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Fermer</button>
                             : <button onClick={async () => { try { await api.patch(`/admin/contest/${ct.id}/open`); toast.success("Concours ouvert ✓"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #10B98130", background: "#10B98110", color: "#10B981", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Ouvrir</button>
@@ -663,13 +684,13 @@ export default function AdminPage() {
             <div className="amodal-body">
             <div style={{ display: "grid", gap: 14 }}>
               <div><label style={S.lbl}>Nom du concours</label><input value={editContestValues.name} onChange={e => setEditContestValues({...editContestValues,name:e.target.value})} style={S.inp} /></div>
-              <div><label style={S.lbl}>Date de début</label><input type="date" value={editContestValues.startDate} onChange={e => setEditContestValues({...editContestValues,startDate:e.target.value})} style={S.inp} /></div>
+              <div><label style={S.lbl}>Date et heure de début</label><input type="datetime-local" value={editContestValues.startDate} onChange={e => setEditContestValues({...editContestValues,startDate:e.target.value})} style={S.inp} /></div>
               <div>
-                <label style={S.lbl}>Date de fin <span style={{ fontWeight: 400, textTransform: "none" }}>(optionnelle)</span></label>
-                <input type="date" value={editContestValues.endDate} onChange={e => setEditContestValues({...editContestValues,endDate:e.target.value})} style={S.inp} />
+                <label style={S.lbl}>Date et heure de fin <span style={{ fontWeight: 400, textTransform: "none" }}>(optionnelle)</span></label>
+                <input type="datetime-local" value={editContestValues.endDate} onChange={e => setEditContestValues({...editContestValues,endDate:e.target.value})} style={S.inp} />
                 {editContestValues.endDate && <button onClick={() => setEditContestValues({...editContestValues,endDate:""})} style={{ marginTop: 4, fontSize: 11, color: "#EF4444", background: "none", border: "none", cursor: "pointer" }}>× Supprimer date fin</button>}
               </div>
-              <button disabled={editContestSaving} onClick={async () => { setEditContestSaving(true); try { await api.patch(`/admin/contest/${editingContest.id}`, { name: editContestValues.name, startDate: editContestValues.startDate, endDate: editContestValues.endDate||null }); toast.success("Mis à jour ✓"); setEditingContest(null); load(); } catch { toast.error("Erreur"); } setEditContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
+              <button disabled={editContestSaving} onClick={async () => { setEditContestSaving(true); try { await api.patch(`/admin/contest/${editingContest.id}`, { name: editContestValues.name, startDate: toISO(editContestValues.startDate), endDate: editContestValues.endDate ? toISO(editContestValues.endDate) : null }); toast.success("Mis à jour ✓"); setEditingContest(null); load(); } catch { toast.error("Erreur"); } setEditContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
                 {editContestSaving ? "Enregistrement..." : "✓ Enregistrer"}
               </button>
             </div>
@@ -688,10 +709,10 @@ export default function AdminPage() {
             <div className="amodal-body">
             <div style={{ display: "grid", gap: 14 }}>
               <div><label style={S.lbl}>Nom *</label><input value={newContest.name} onChange={e => setNewContest({...newContest,name:e.target.value})} placeholder="Ex: MetaMiss 2026" style={S.inp} /></div>
-              <div><label style={S.lbl}>Date de début *</label><input type="date" value={newContest.startDate} onChange={e => setNewContest({...newContest,startDate:e.target.value})} style={S.inp} /></div>
-              <div><label style={S.lbl}>Date de fin <span style={{ fontWeight: 400, textTransform: "none" }}>(optionnelle)</span></label><input type="date" value={newContest.endDate} onChange={e => setNewContest({...newContest,endDate:e.target.value})} style={S.inp} /></div>
-              <div style={{ padding: "12px 14px", borderRadius: 12, background: "#F0FDF4", border: "1px solid #BBF7D0", fontSize: 13, color: "#16A34A" }}>ℹ️ Le concours sera immédiatement ouvert dès la création.</div>
-              <button disabled={contestSaving||!newContest.name||!newContest.startDate} onClick={async () => { if (!newContest.name||!newContest.startDate) { toast.error("Nom et date requis"); return; } setContestSaving(true); try { await api.post("/admin/contest", { name: newContest.name, startDate: newContest.startDate, ...(newContest.endDate&&{endDate:newContest.endDate}) }); toast.success("Concours créé ✓"); setShowCreateContest(false); setNewContest({name:"",startDate:"",endDate:""}); load(); } catch(err:any) { toast.error(err?.response?.data?.message||"Erreur"); } setContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: (!newContest.name||!newContest.startDate)?0.5:1, fontFamily: "inherit" }}>
+              <div><label style={S.lbl}>Date et heure de début *</label><input type="datetime-local" value={newContest.startDate} onChange={e => setNewContest({...newContest,startDate:e.target.value})} style={S.inp} /></div>
+              <div><label style={S.lbl}>Date et heure de fin <span style={{ fontWeight: 400, textTransform: "none" }}>(optionnelle)</span></label><input type="datetime-local" value={newContest.endDate} onChange={e => setNewContest({...newContest,endDate:e.target.value})} style={S.inp} /></div>
+              <div style={{ padding: "12px 14px", borderRadius: 12, background: "#F0FDF4", border: "1px solid #BBF7D0", fontSize: 13, color: "#16A34A" }}>ℹ️ Le concours sera immédiatement ouvert dès la création. Le compte à rebours de l'accueil se base sur la date et l'heure de début.</div>
+              <button disabled={contestSaving||!newContest.name||!newContest.startDate} onClick={async () => { if (!newContest.name||!newContest.startDate) { toast.error("Nom et date requis"); return; } setContestSaving(true); try { await api.post("/admin/contest", { name: newContest.name, startDate: toISO(newContest.startDate), ...(newContest.endDate&&{endDate:toISO(newContest.endDate)}) }); toast.success("Concours créé ✓"); setShowCreateContest(false); setNewContest({name:"",startDate:"",endDate:""}); load(); } catch(err:any) { toast.error(err?.response?.data?.message||"Erreur"); } setContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: (!newContest.name||!newContest.startDate)?0.5:1, fontFamily: "inherit" }}>
                 {contestSaving ? "Création..." : "✓ Créer le concours"}
               </button>
             </div>
