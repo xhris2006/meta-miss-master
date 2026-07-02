@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/store/langStore";
 import { useLangStore } from "@/store/langStore";
 import api from "@/lib/api";
+import ContactSponsor from "@/components/ContactSponsor";
 
 const faqsFr = [
   { q: "Comment voter ?", a: "Choisissez une candidate, cliquez 'Voter', choisissez le montant (100 FCFA = 1 vote) et payez via Orange Money, MTN Mobile Money ou Genius Pay." },
@@ -160,6 +161,14 @@ export default function SupportPage() {
           <a href="mailto:support@metamissemaster.cm" className="btn-outline" style={{ display: "block", fontSize: "0.85rem" }}>
             ✉️ {t.sendEmail || "Envoyer un email"}
           </a>
+        </div>
+
+        {/* Partenariat : contacter le développeur / sponsoriser l'événement */}
+        <div style={{ marginTop: 24 }}>
+          <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "var(--text)", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+            <span>🤝</span> {t.partnershipTitle || "Partenariat & Contact"}
+          </div>
+          <ContactSponsor />
         </div>
 
       </div>

@@ -37,13 +37,13 @@ export default function CandidatesPage() {
     <div className="page-content fade-up">
       <style>{`
         /* ─── CANDIDATES GRID PAGE ─── */
-        .cand-page-header { padding: 22px 16px 14px; text-align: center; }
-        .cand-page-header .crown-icon { color: var(--blue); margin-bottom: 6px; }
+        .cand-page-header { padding: 20px 16px 12px; text-align: center; }
+        .cand-page-header .crown-icon { color: var(--blue); margin-bottom: 5px; }
         .cand-page-header h1 {
-          font-size: 1.4rem; font-weight: 800; color: var(--blue); letter-spacing: 0.04em;
-          text-transform: uppercase; margin-bottom: 4px;
+          font-size: 1.2rem; font-weight: 800; color: var(--blue); letter-spacing: 0.04em;
+          text-transform: uppercase; margin-bottom: 3px;
         }
-        .cand-page-header p { font-size: 0.82rem; color: var(--text-muted); }
+        .cand-page-header p { font-size: 0.78rem; color: var(--text-muted); }
 
         .cand-search-wrap { padding: 0 16px 12px; }
         .cand-search-inner {
@@ -64,68 +64,70 @@ export default function CandidatesPage() {
         }
         .cand-chip.active { background: var(--blue); color: #fff; border-color: var(--blue); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
 
-        /* Small dense grid — 2 cols on mobile, more on larger screens */
+        /* Small dense grid — 2 cols on mobile, up to 5 on desktop */
         .cand-grid {
-          padding: 0 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+          padding: 0 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
         }
-        @media (min-width: 640px) { .cand-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; } }
-        @media (min-width: 980px) { .cand-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 0 24px; } }
+        @media (min-width: 560px)  { .cand-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
+        @media (min-width: 900px)  { .cand-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 0 24px; } }
+        @media (min-width: 1200px) { .cand-grid { grid-template-columns: repeat(5, 1fr); } }
 
         .cand-card {
-          background: var(--bg-white); border-radius: 18px; overflow: hidden; border: 1.5px solid var(--border);
-          box-shadow: var(--shadow); text-decoration: none; display: block; position: relative;
-          transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+          background: var(--bg-white); border-radius: 16px; overflow: hidden; border: 1px solid var(--border);
+          box-shadow: var(--shadow); text-decoration: none; display: flex; flex-direction: column; position: relative;
+          transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, border-color 0.25s ease;
         }
         .cand-card:hover {
-          transform: translateY(-6px);
+          transform: translateY(-5px);
           border-color: var(--blue);
-          box-shadow: 0 14px 30px rgba(37,99,235,0.22);
+          box-shadow: 0 14px 30px rgba(37,99,235,0.2);
         }
-        .cand-card:active { transform: translateY(-2px) scale(0.99); }
+        .cand-card:active { transform: translateY(-1px) scale(0.99); }
         .cand-card-img-wrap { position: relative; aspect-ratio: 3/4; background: var(--bg); overflow: hidden; }
         .cand-card-img-wrap::after {
           content: ""; position: absolute; inset: 0; background: rgba(37,99,235,0);
-          transition: background 0.22s ease;
+          transition: background 0.25s ease;
         }
-        .cand-card:hover .cand-card-img-wrap::after { background: rgba(37,99,235,0.08); }
-        .cand-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-        .cand-card:hover .cand-card-img-wrap img { transform: scale(1.07); }
+        .cand-card:hover .cand-card-img-wrap::after { background: rgba(37,99,235,0.07); }
+        .cand-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+        .cand-card:hover .cand-card-img-wrap img { transform: scale(1.06); }
 
         .cand-card-rank {
-          position: absolute; top: 9px; left: 9px; background: rgba(37,99,235,0.92); backdrop-filter: blur(6px);
-          color: #fff; font-size: 0.7rem; font-weight: 800; padding: 4px 9px; border-radius: 9px;
+          position: absolute; top: 8px; left: 8px; background: rgba(37,99,235,0.92); backdrop-filter: blur(6px);
+          color: #fff; font-size: 0.64rem; font-weight: 800; padding: 3px 8px; border-radius: 8px;
           display: flex; align-items: center; gap: 4px; letter-spacing: 0.02em;
         }
         .cand-card-rank.gold { background: rgba(245,158,11,0.94); }
         .cand-card-rank.silver { background: rgba(148,163,184,0.94); }
         .cand-card-rank.bronze { background: rgba(217,119,6,0.94); }
         .cand-card-votes {
-          position: absolute; top: 9px; right: 9px; background: rgba(255,255,255,0.94); backdrop-filter: blur(6px);
-          color: var(--blue); font-size: 0.7rem; font-weight: 800; padding: 4px 9px; border-radius: 9px;
+          position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.94); backdrop-filter: blur(6px);
+          color: var(--blue); font-size: 0.64rem; font-weight: 800; padding: 3px 8px; border-radius: 8px;
           display: flex; align-items: center; gap: 4px;
         }
         /* gradient name overlay on the photo */
         .cand-card-overlay {
-          position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 10px 9px;
-          background: linear-gradient(transparent, rgba(0,0,0,0.78)); color: #fff;
+          position: absolute; left: 0; right: 0; bottom: 0; padding: 24px 9px 8px;
+          background: linear-gradient(transparent, rgba(0,0,0,0.8)); color: #fff;
         }
         .cand-card-name {
-          font-size: 0.88rem; font-weight: 800; line-height: 1.15;
+          font-size: 0.8rem; font-weight: 800; line-height: 1.15;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .cand-card-cat { font-size: 0.62rem; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+        .cand-card-cat { font-size: 0.58rem; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
 
-        .cand-card-foot { display: flex; align-items: center; justify-content: space-between; padding: 9px 11px 11px; }
-        .cand-card-foot .pos { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); }
-        .cand-card-foot .v { font-size: 0.72rem; font-weight: 800; color: var(--blue); display: flex; align-items: center; gap: 4px; }
+        .cand-card-foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; }
+        .cand-card-foot .pos { font-size: 0.66rem; font-weight: 700; color: var(--text-muted); }
+        .cand-card-foot .v { font-size: 0.66rem; font-weight: 800; color: var(--blue); display: flex; align-items: center; gap: 4px; }
         .cand-card-cta {
           display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%;
-          padding: 9px; background: var(--blue-light); color: var(--blue); font-size: 0.74rem; font-weight: 800;
-          border-top: 1px solid var(--border-light);
+          margin-top: auto; padding: 8px; background: var(--blue-light); color: var(--blue);
+          font-size: 0.68rem; font-weight: 800; border-top: 1px solid var(--border-light);
+          transition: background 0.2s ease, color 0.2s ease;
         }
         .cand-card:hover .cand-card-cta { background: var(--blue); color: #fff; }
 
-        .cand-skel { border-radius: 18px; overflow: hidden; border: 1px solid var(--border); }
+        .cand-skel { border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
         .cand-skel-img { aspect-ratio: 3/4; }
       `}</style>
 

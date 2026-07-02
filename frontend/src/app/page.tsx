@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import LandingCandidates from "@/components/LandingCandidates";
+import ContactSponsor from "@/components/ContactSponsor";
 import LangSelector from "@/components/ui/LangSelector";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useT } from "@/store/langStore";
@@ -203,19 +204,19 @@ export default function LandingPage() {
         {/* Compte à rebours : temps restant avant le début des votes */}
         {countdown && (
           <div className="lp-countdown">
-            <div className="lp-cd-label">🗳️ Les votes commencent dans</div>
+            <div className="lp-cd-label">{t.votesStartIn || "🗳️ Les votes commencent dans"}</div>
             <div className="lp-cd-grid">
-              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.d)}</span><span className="lp-cd-unit">Jours</span></div>
-              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.h)}</span><span className="lp-cd-unit">Heures</span></div>
-              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.m)}</span><span className="lp-cd-unit">Min</span></div>
-              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.s)}</span><span className="lp-cd-unit">Sec</span></div>
+              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.d)}</span><span className="lp-cd-unit">{t.days || "Jours"}</span></div>
+              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.h)}</span><span className="lp-cd-unit">{t.hours || "Heures"}</span></div>
+              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.m)}</span><span className="lp-cd-unit">{t.minutes || "Min"}</span></div>
+              <div className="lp-cd-box"><span className="lp-cd-num">{pad(countdown.s)}</span><span className="lp-cd-unit">{t.seconds || "Sec"}</span></div>
             </div>
           </div>
         )}
 
         {/* Votes ouverts (date de début atteinte) */}
         {votesOpen && (
-          <div className="lp-votes-open">🎉 Les votes sont ouverts !</div>
+          <div className="lp-votes-open">{t.votesOpenBanner || "🎉 Les votes sont ouverts !"}</div>
         )}
 
         {/* Bannière votes doubles (promo activée par l'admin) */}
@@ -223,8 +224,8 @@ export default function LandingPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 11, background: "linear-gradient(135deg,#059669,#10B981 55%,#34D399)", color: "#fff", borderRadius: 16, padding: "13px 16px", marginBottom: 16, boxShadow: "0 6px 22px rgba(16,185,129,0.35)" }}>
             <span style={{ fontSize: "1.6rem", lineHeight: 1 }}>⚡</span>
             <div>
-              <div style={{ fontWeight: 800, fontSize: "0.92rem" }}>Votes doubles activés !</div>
-              <div style={{ fontSize: "0.74rem", opacity: 0.92 }}>Pendant la promo, chaque vote compte ×2 pour votre candidate.</div>
+              <div style={{ fontWeight: 800, fontSize: "0.92rem" }}>{t.doubleVotesTitle || "Votes doubles activés !"}</div>
+              <div style={{ fontSize: "0.74rem", opacity: 0.92 }}>{t.doubleVotesDesc || "Pendant la promo, chaque vote compte ×2 pour votre candidate."}</div>
             </div>
           </div>
         )}
@@ -285,6 +286,14 @@ export default function LandingPage() {
           </svg>
           {t.becomeCandidate || "Devenir candidate"}
         </Link>
+
+        {/* Partenariat : contacter le développeur / sponsoriser l'événement */}
+        <div style={{ marginTop: 22 }}>
+          <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
+            {t.partnershipTitle || "Partenariat & Contact"}
+          </div>
+          <ContactSponsor />
+        </div>
       </div>
     </div>
   );

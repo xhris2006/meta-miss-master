@@ -182,6 +182,25 @@ export const translations = {
     supportHeroSub: "Rejoignez la communauté et suivez le concours en temps réel sur nos réseaux.",
     contactDesc: "Notre équipe est disponible pour répondre à toutes vos questions.",
     sendEmail: "Envoyer un email",
+    // Contact développeur / Sponsor
+    contactDev: "Contacter le développeur",
+    contactDevD: "Un site comme celui-ci ? Parlons-en",
+    sponsorEvent: "Sponsoriser l'événement",
+    sponsorEventD: "Devenez partenaire officiel du concours",
+    contactDevMsg: "Bonjour 👋 Je vous contacte depuis le site MetaMiss Master 2026. Je souhaite parler au développeur du site.",
+    sponsorMsg: "Bonjour 👋 Je souhaite sponsoriser l'événement MetaMiss Master 2026. Pouvez-vous m'en dire plus sur les offres de partenariat ?",
+    partnershipTitle: "Partenariat & Contact",
+    // Landing
+    votesStartIn: "🗳️ Les votes commencent dans",
+    votesOpenBanner: "🎉 Les votes sont ouverts !",
+    days: "Jours",
+    hours: "Heures",
+    minutes: "Min",
+    seconds: "Sec",
+    doubleVotesTitle: "Votes doubles activés !",
+    doubleVotesDesc: "Pendant la promo, chaque vote compte ×2 pour votre candidate.",
+    // Swipe
+    swipeHint: "Glissez à gauche ou à droite pour découvrir d'autres candidats",
     // Misc
     loading: "Chargement...",
     error: "Une erreur est survenue",
@@ -367,6 +386,25 @@ export const translations = {
     supportHeroSub: "Join the community and follow the contest live on our networks.",
     contactDesc: "Our team is available to answer all your questions.",
     sendEmail: "Send an email",
+    // Contact developer / Sponsor
+    contactDev: "Contact the developer",
+    contactDevD: "Want a website like this one? Let's talk",
+    sponsorEvent: "Sponsor the event",
+    sponsorEventD: "Become an official partner of the contest",
+    contactDevMsg: "Hello 👋 I'm contacting you from the MetaMiss Master 2026 website. I would like to talk to the website developer.",
+    sponsorMsg: "Hello 👋 I would like to sponsor the MetaMiss Master 2026 event. Can you tell me more about the partnership offers?",
+    partnershipTitle: "Partnership & Contact",
+    // Landing
+    votesStartIn: "🗳️ Voting starts in",
+    votesOpenBanner: "🎉 Voting is open!",
+    days: "Days",
+    hours: "Hours",
+    minutes: "Min",
+    seconds: "Sec",
+    doubleVotesTitle: "Double votes activated!",
+    doubleVotesDesc: "During the promo, every vote counts ×2 for your candidate.",
+    // Swipe
+    swipeHint: "Swipe left or right to discover other candidates",
     // Misc
     loading: "Loading...",
     error: "An error occurred",

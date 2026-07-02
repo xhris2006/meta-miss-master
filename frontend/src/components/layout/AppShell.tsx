@@ -16,7 +16,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-wrapper">
       <BottomNav />
-      <main className="app-main">{children}</main>
+      <main className="app-main">
+        {/* Re-monté à chaque route → animation d'entrée fluide entre les pages */}
+        <div key={pathname} className="route-transition">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

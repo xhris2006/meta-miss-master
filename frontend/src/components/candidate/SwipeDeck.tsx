@@ -4,15 +4,17 @@
    • Drag with finger (mobile) or mouse (desktop)
    • Live rotation + translation while dragging
    • Release > 150px → card flies away + next/prev candidate
+     (swipe left = next, swipe right = previous — natural carousel)
    • Overlay ◀ ▶ buttons to swipe without a gesture
    • Double-tap = like (animated heart)
-   • Green heart (right) / red cross (left) indicator while swiping
+   • "Suivant"/"Précédent" direction stamps while swiping
    • Center card highlighted, side cards peeking (scale + z-index)
    • Dots pagination + "swipe" hint with a hand icon
    Built with React + TypeScript + Framer Motion + Tailwind.
 ═══════════════════════════════════════════════════════════════ */
 import { useRef, useState, useEffect } from "react";
 import { motion, animate, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
+import { useT } from "@/store/langStore";
 
 export interface SwipeCandidate {
   id: string;
@@ -59,10 +61,11 @@ export default function SwipeDeck({
   onToggleLike,
   getRank,
 }: SwipeDeckProps) {
+  const t = useT();
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-260, 0, 260], [-13, 0, 13]);
-  const likeOpacity = useTransform(x, [40, 150], [0, 1]); // swiping right
-  const nopeOpacity = useTransform(x, [-150, -40], [1, 0]); // swiping left
+  const nextOpacity = useTransform(x, [-150, -40], [1, 0]); // glisse à gauche → suivant
+  const prevOpacity = useTransform(x, [40, 150], [0, 1]); // glisse à droite → précédent
 
   const animatingRef = useRef(false);
   const lastTapRef = useRef(0);
@@ -87,7 +90,11 @@ export default function SwipeDeck({
     return v >= 1000 ? `${(v / 1000).toFixed(1)}K` : String(v);
   };
 
-  /** dir = +1 → next candidate (card flies right) · -1 → previous (flies left) */
+  /**
+   * dir = +1 → candidat suivant : la carte part vers la GAUCHE et la
+   * suivante entre par la droite (sens naturel d'un carrousel).
+   * dir = -1 → candidat précédent : la carte part vers la DROITE.
+   */
   const paginate = (dir: 1 | -1) => {
     if (animatingRef.current) return;
     const target = index + dir;
@@ -99,15 +106,15 @@ export default function SwipeDeck({
     animatingRef.current = true;
     const w = typeof window !== "undefined" ? window.innerWidth : 600;
     // 1. Throw the current card off-screen in the swipe direction.
-    animate(x, dir * w, {
-      duration: 0.3,
+    animate(x, -dir * w, {
+      duration: 0.28,
       ease: "easeIn",
       onComplete: () => {
         // 2. Swap content, jump to the opposite edge, then slide back in.
         //    animatingRef stays true until the slide-in finishes so the
         //    index-change effect below doesn't snap x back to 0 mid-animation.
         onIndexChange(target);
-        x.set(-dir * w * 0.55);
+        x.set(dir * w * 0.55);
         animate(x, 0, {
           type: "spring",
           stiffness: 260,
@@ -123,8 +130,9 @@ export default function SwipeDeck({
   const handleDragEnd = (_e: any, info: { offset: { x: number }; velocity: { x: number } }) => {
     const offset = info.offset.x;
     const velocity = info.velocity.x;
-    if (offset > SWIPE_THRESHOLD || velocity > VELOCITY_THRESHOLD) paginate(1);
-    else if (offset < -SWIPE_THRESHOLD || velocity < -VELOCITY_THRESHOLD) paginate(-1);
+    // Glisser vers la gauche → suivant · vers la droite → précédent
+    if (offset < -SWIPE_THRESHOLD || velocity < -VELOCITY_THRESHOLD) paginate(1);
+    else if (offset > SWIPE_THRESHOLD || velocity > VELOCITY_THRESHOLD) paginate(-1);
     else animate(x, 0, { type: "spring", stiffness: 320, damping: 28 });
   };
 
@@ -257,8 +265,8 @@ export default function SwipeDeck({
           padding: 8px 14px; border-radius: 12px; border: 3px solid;
           text-transform: uppercase; pointer-events: none;
         }
-        .swipe-stamp.like { right: 18px; color: #10B981; border-color: #10B981; background: rgba(16,185,129,0.12); transform: rotate(12deg); }
-        .swipe-stamp.nope { left: 18px; color: #EF4444; border-color: #EF4444; background: rgba(239,68,68,0.12); transform: rotate(-12deg); }
+        .swipe-stamp.next { right: 18px; color: #fff; border-color: rgba(255,255,255,0.85); background: rgba(37,99,235,0.75); backdrop-filter: blur(4px); transform: rotate(6deg); }
+        .swipe-stamp.prev { left: 18px; color: #fff; border-color: rgba(255,255,255,0.85); background: rgba(37,99,235,0.75); backdrop-filter: blur(4px); transform: rotate(-6deg); }
 
         /* Double-tap heart burst */
         .swipe-heart-burst {
@@ -352,14 +360,14 @@ export default function SwipeDeck({
               {fmtVotes(current.totalVotes)}
             </div>
 
-            {/* Swipe indicators */}
-            <motion.div className="swipe-stamp like" style={{ opacity: likeOpacity }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="#10B981"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" /></svg>
-              LIKE
+            {/* Swipe indicators — direction du carrousel */}
+            <motion.div className="swipe-stamp next" style={{ opacity: nextOpacity }}>
+              {t.next || "Suivant"}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </motion.div>
-            <motion.div className="swipe-stamp nope" style={{ opacity: nopeOpacity }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-              NOPE
+            <motion.div className="swipe-stamp prev" style={{ opacity: prevOpacity }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+              {t.previous || "Précédent"}
             </motion.div>
 
             {/* Double-tap heart */}
@@ -417,7 +425,7 @@ export default function SwipeDeck({
           <path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8" />
           <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
         </svg>
-        Swipez à gauche ou à droite pour découvrir d'autres candidats
+        {t.swipeHint || "Glissez à gauche ou à droite pour découvrir d'autres candidats"}
       </div>
     </div>
   );
