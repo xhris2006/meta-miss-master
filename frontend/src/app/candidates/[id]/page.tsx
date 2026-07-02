@@ -73,11 +73,11 @@ export default function CandidateDetailPage() {
 
   const active: any = list[activeIndex] || fallback;
 
-  // Keep the URL in sync with the visible card without a re-fetch
+  // NE PAS toucher à l'URL ici : sous Next 14, history.replaceState est
+  // intercepté par l'App Router et réinitialise l'état de la page (retour
+  // au premier candidat). Les liens de partage utilisent active.id.
   const handleIndexChange = (next: number) => {
     setActiveIndex(next);
-    const c = list[next];
-    if (c) window.history.replaceState(null, "", `/candidates/${c.id}`);
   };
 
   const rankOf = (c: SwipeCandidate) => {
@@ -252,7 +252,9 @@ export default function CandidateDetailPage() {
         <span className="cd-topbar-title">{t.candidate || "Candidat"}</span>
         <button
           onClick={async () => {
-            const url = window.location.href;
+            // URL du candidat actuellement affiché (l'URL du navigateur
+            // reste celle d'entrée : on ne la modifie plus pendant le swipe)
+            const url = `${window.location.origin}/candidates/${active.id}`;
             try {
               if (navigator.share) await navigator.share({ title: active.name, url });
               else {
