@@ -67,7 +67,15 @@ export default function SwipeDeck({
   const nextOpacity = useTransform(x, [-150, -40], [1, 0]); // glisse à gauche → suivant
   const prevOpacity = useTransform(x, [40, 150], [0, 1]); // glisse à droite → précédent
 
-  const animatingRef = useRef(false);
+  /**
+   * Phase de l'animation de pagination :
+   * - "idle" : rien en cours, la carte est manipulable
+   * - "out"  : la carte s'envole (contenu pas encore remplacé) → non interruptible
+   * - "in"   : la nouvelle carte glisse vers le centre → interruptible (un
+   *            nouveau swipe reprend la main immédiatement, pour enchaîner)
+   */
+  const phaseRef = useRef<"idle" | "out" | "in">("idle");
+  const [flying, setFlying] = useState(false); // désactive le pointeur pendant l'envol
   const lastTapRef = useRef(0);
   const [heartBurst, setHeartBurst] = useState(0); // bump key to replay heart
 
@@ -77,7 +85,7 @@ export default function SwipeDeck({
 
   // Keep the card centered when the index is set externally (e.g. first load).
   useEffect(() => {
-    if (!animatingRef.current) x.set(0);
+    if (phaseRef.current === "idle") x.set(0);
   }, [index, x]);
 
   const photoOf = (c?: SwipeCandidate) => {
@@ -90,20 +98,38 @@ export default function SwipeDeck({
     return v >= 1000 ? `${(v / 1000).toFixed(1)}K` : String(v);
   };
 
+  /** Retour élastique au centre (interruptible par un nouveau geste). */
+  const springBack = () => {
+    phaseRef.current = "in";
+    animate(x, 0, {
+      type: "spring",
+      stiffness: 320,
+      damping: 28,
+      onComplete: () => {
+        phaseRef.current = "idle";
+      },
+    });
+  };
+
   /**
    * dir = +1 → candidat suivant : la carte part vers la GAUCHE et la
    * suivante entre par la droite (sens naturel d'un carrousel).
    * dir = -1 → candidat précédent : la carte part vers la DROITE.
    */
   const paginate = (dir: 1 | -1) => {
-    if (animatingRef.current) return;
+    // Carte en plein envol (contenu pas encore remplacé) : on ignore.
+    if (phaseRef.current === "out") return;
     const target = index + dir;
     // Out of bounds → bounce back to center.
     if (target < 0 || target >= candidates.length) {
-      animate(x, 0, { type: "spring", stiffness: 320, damping: 28 });
+      springBack();
       return;
     }
-    animatingRef.current = true;
+    // Si la carte glissait encore vers le centre, on reprend la main
+    // immédiatement : les swipes peuvent s'enchaîner sans se bloquer.
+    x.stop();
+    phaseRef.current = "out";
+    setFlying(true);
     const w = typeof window !== "undefined" ? window.innerWidth : 600;
     // 1. Throw the current card off-screen in the swipe direction.
     animate(x, -dir * w, {
@@ -111,20 +137,28 @@ export default function SwipeDeck({
       ease: "easeIn",
       onComplete: () => {
         // 2. Swap content, jump to the opposite edge, then slide back in.
-        //    animatingRef stays true until the slide-in finishes so the
-        //    index-change effect below doesn't snap x back to 0 mid-animation.
+        //    La phase reste ≠ "idle" jusqu'à la fin du slide-in pour que
+        //    l'effet lié à l'index ne recale pas x à 0 en pleine animation.
         onIndexChange(target);
         x.set(dir * w * 0.55);
+        phaseRef.current = "in";
+        setFlying(false);
         animate(x, 0, {
           type: "spring",
           stiffness: 260,
           damping: 26,
           onComplete: () => {
-            animatingRef.current = false;
+            phaseRef.current = "idle";
           },
         });
       },
     });
+  };
+
+  // Un drag qui démarre pendant le slide-in prend la main : framer stoppe le
+  // ressort sur x, on marque donc la phase comme libre pour le prochain geste.
+  const handleDragStart = () => {
+    if (phaseRef.current === "in") phaseRef.current = "idle";
   };
 
   const handleDragEnd = (_e: any, info: { offset: { x: number }; velocity: { x: number } }) => {
@@ -133,7 +167,7 @@ export default function SwipeDeck({
     // Glisser vers la gauche → suivant · vers la droite → précédent
     if (offset < -SWIPE_THRESHOLD || velocity < -VELOCITY_THRESHOLD) paginate(1);
     else if (offset > SWIPE_THRESHOLD || velocity > VELOCITY_THRESHOLD) paginate(-1);
-    else animate(x, 0, { type: "spring", stiffness: 320, damping: 28 });
+    else springBack();
   };
 
   // Double-tap gesture → add a like (idempotent) + heart burst.
@@ -302,7 +336,9 @@ export default function SwipeDeck({
         @keyframes swipe-wave { 0%,100% { transform: translateX(-5px) rotate(-8deg); } 50% { transform: translateX(5px) rotate(8deg); } }
       `}</style>
 
-      <div className="swipe-stage">
+      {/* Pointeur coupé pendant l'envol : évite qu'un geste rapide n'attrape
+          la carte en vol ou ne clique le peek de l'ancien candidat */}
+      <div className="swipe-stage" style={{ pointerEvents: flying ? "none" : "auto" }}>
         {/* Left arrow → previous */}
         <button className="swipe-arrow left" onClick={() => paginate(-1)} disabled={!prev} aria-label="Précédent">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" strokeWidth="2.5">
@@ -332,6 +368,7 @@ export default function SwipeDeck({
           style={{ x, rotate }}
           drag="x"
           dragMomentum={false}
+          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onTap={handleTap}
           whileTap={{ scale: 0.99 }}
