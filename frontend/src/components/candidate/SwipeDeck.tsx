@@ -1,19 +1,21 @@
 "use client";
 /* ════════════════════════════════════════════════════════════════
-   SwipeDeck — Tinder-style swipeable profile cards
+   SwipeDeck — swipeable profile cards (natural carousel)
    • Drag with finger (mobile) or mouse (desktop)
    • Live rotation + translation while dragging
-   • Release > 150px → card flies away + next/prev candidate
-     (swipe left = next, swipe right = previous — natural carousel)
+   • Swipe left = next candidate · swipe right = previous
+   • Each card is its own keyed element (AnimatePresence) : the index
+     changes as soon as the gesture is released, so fast successive
+     swipes can never lock the deck or bring back the old candidate
    • Overlay ◀ ▶ buttons to swipe without a gesture
    • Double-tap = like (animated heart)
-   • "Suivant"/"Précédent" direction stamps while swiping
-   • Center card highlighted, side cards peeking (scale + z-index)
+   • "Suivant"/"Précédent" direction stamps while dragging
+   • Center card highlighted, side cards peeking
    • Dots pagination + "swipe" hint with a hand icon
    Built with React + TypeScript + Framer Motion + Tailwind.
 ═══════════════════════════════════════════════════════════════ */
-import { useRef, useState, useEffect } from "react";
-import { motion, animate, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
+import { useRef, useState } from "react";
+import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
 import { useT } from "@/store/langStore";
 
 export interface SwipeCandidate {
@@ -48,8 +50,21 @@ interface SwipeDeckProps {
   getRank?: (c: SwipeCandidate) => number;
 }
 
-const SWIPE_THRESHOLD = 150;
-const VELOCITY_THRESHOLD = 700;
+const SWIPE_THRESHOLD = 90;
+const VELOCITY_THRESHOLD = 450;
+
+/** Distance hors-écran pour l'entrée/sortie des cartes. */
+const offscreen = () => (typeof window !== "undefined" ? window.innerWidth : 600);
+
+/**
+ * dir = +1 (suivant) : la carte sort à GAUCHE, la nouvelle entre par la droite.
+ * dir = -1 (précédent) : la carte sort à DROITE, la nouvelle entre par la gauche.
+ */
+const cardVariants = {
+  enter: (dir: 1 | -1) => ({ x: dir === 1 ? offscreen() : -offscreen() }),
+  center: { x: 0 },
+  exit: (dir: 1 | -1) => ({ x: dir === 1 ? -offscreen() : offscreen() }),
+};
 
 export default function SwipeDeck({
   candidates,
@@ -62,31 +77,14 @@ export default function SwipeDeck({
   getRank,
 }: SwipeDeckProps) {
   const t = useT();
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-260, 0, 260], [-13, 0, 13]);
-  const nextOpacity = useTransform(x, [-150, -40], [1, 0]); // glisse à gauche → suivant
-  const prevOpacity = useTransform(x, [40, 150], [0, 1]); // glisse à droite → précédent
-
-  /**
-   * Phase de l'animation de pagination :
-   * - "idle" : rien en cours, la carte est manipulable
-   * - "out"  : la carte s'envole (contenu pas encore remplacé) → non interruptible
-   * - "in"   : la nouvelle carte glisse vers le centre → interruptible (un
-   *            nouveau swipe reprend la main immédiatement, pour enchaîner)
-   */
-  const phaseRef = useRef<"idle" | "out" | "in">("idle");
-  const [flying, setFlying] = useState(false); // désactive le pointeur pendant l'envol
+  // Direction du dernier swipe : pilote le côté d'entrée/sortie des cartes.
+  const [direction, setDirection] = useState<1 | -1>(1);
   const lastTapRef = useRef(0);
   const [heartBurst, setHeartBurst] = useState(0); // bump key to replay heart
 
   const current = candidates[index];
   const prev = candidates[index - 1];
   const next = candidates[index + 1];
-
-  // Keep the card centered when the index is set externally (e.g. first load).
-  useEffect(() => {
-    if (phaseRef.current === "idle") x.set(0);
-  }, [index, x]);
 
   const photoOf = (c?: SwipeCandidate) => {
     if (!c?.photoUrl) return "/placeholder-avatar.svg";
@@ -98,76 +96,21 @@ export default function SwipeDeck({
     return v >= 1000 ? `${(v / 1000).toFixed(1)}K` : String(v);
   };
 
-  /** Retour élastique au centre (interruptible par un nouveau geste). */
-  const springBack = () => {
-    phaseRef.current = "in";
-    animate(x, 0, {
-      type: "spring",
-      stiffness: 320,
-      damping: 28,
-      onComplete: () => {
-        phaseRef.current = "idle";
-      },
-    });
-  };
-
-  /**
-   * dir = +1 → candidat suivant : la carte part vers la GAUCHE et la
-   * suivante entre par la droite (sens naturel d'un carrousel).
-   * dir = -1 → candidat précédent : la carte part vers la DROITE.
-   */
+  /** Change d'index immédiatement — AnimatePresence gère la transition. */
   const paginate = (dir: 1 | -1) => {
-    // Carte en plein envol (contenu pas encore remplacé) : on ignore.
-    if (phaseRef.current === "out") return;
     const target = index + dir;
-    // Out of bounds → bounce back to center.
-    if (target < 0 || target >= candidates.length) {
-      springBack();
-      return;
-    }
-    // Si la carte glissait encore vers le centre, on reprend la main
-    // immédiatement : les swipes peuvent s'enchaîner sans se bloquer.
-    x.stop();
-    phaseRef.current = "out";
-    setFlying(true);
-    const w = typeof window !== "undefined" ? window.innerWidth : 600;
-    // 1. Throw the current card off-screen in the swipe direction.
-    animate(x, -dir * w, {
-      duration: 0.28,
-      ease: "easeIn",
-      onComplete: () => {
-        // 2. Swap content, jump to the opposite edge, then slide back in.
-        //    La phase reste ≠ "idle" jusqu'à la fin du slide-in pour que
-        //    l'effet lié à l'index ne recale pas x à 0 en pleine animation.
-        onIndexChange(target);
-        x.set(dir * w * 0.55);
-        phaseRef.current = "in";
-        setFlying(false);
-        animate(x, 0, {
-          type: "spring",
-          stiffness: 260,
-          damping: 26,
-          onComplete: () => {
-            phaseRef.current = "idle";
-          },
-        });
-      },
-    });
-  };
-
-  // Un drag qui démarre pendant le slide-in prend la main : framer stoppe le
-  // ressort sur x, on marque donc la phase comme libre pour le prochain geste.
-  const handleDragStart = () => {
-    if (phaseRef.current === "in") phaseRef.current = "idle";
+    if (target < 0 || target >= candidates.length) return;
+    setDirection(dir);
+    onIndexChange(target);
   };
 
   const handleDragEnd = (_e: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    const offset = info.offset.x;
-    const velocity = info.velocity.x;
-    // Glisser vers la gauche → suivant · vers la droite → précédent
+    const { x: offset } = info.offset;
+    const { x: velocity } = info.velocity;
+    // Glisser vers la gauche → suivant · vers la droite → précédent.
+    // Sinon la carte revient d'elle-même au centre (dragConstraints).
     if (offset < -SWIPE_THRESHOLD || velocity < -VELOCITY_THRESHOLD) paginate(1);
     else if (offset > SWIPE_THRESHOLD || velocity > VELOCITY_THRESHOLD) paginate(-1);
-    else springBack();
   };
 
   // Double-tap gesture → add a like (idempotent) + heart burst.
@@ -251,6 +194,7 @@ export default function SwipeDeck({
           box-shadow: 0 18px 50px rgba(37,99,235,0.22), 0 4px 14px rgba(0,0,0,0.1);
           border: 1.5px solid var(--blue-mid);
           cursor: grab;
+          touch-action: pan-y;
         }
         .swipe-card:active { cursor: grabbing; }
         .swipe-card-img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
@@ -336,9 +280,7 @@ export default function SwipeDeck({
         @keyframes swipe-wave { 0%,100% { transform: translateX(-5px) rotate(-8deg); } 50% { transform: translateX(5px) rotate(8deg); } }
       `}</style>
 
-      {/* Pointeur coupé pendant l'envol : évite qu'un geste rapide n'attrape
-          la carte en vol ou ne clique le peek de l'ancien candidat */}
-      <div className="swipe-stage" style={{ pointerEvents: flying ? "none" : "auto" }}>
+      <div className="swipe-stage">
         {/* Left arrow → previous */}
         <button className="swipe-arrow left" onClick={() => paginate(-1)} disabled={!prev} aria-label="Précédent">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" strokeWidth="2.5">
@@ -362,81 +304,26 @@ export default function SwipeDeck({
           </div>
         )}
 
-        {/* ── Active draggable card (persistent element, content swaps on swipe) ── */}
-        <motion.div
-          className="swipe-card"
-          style={{ x, rotate }}
-          drag="x"
-          dragMomentum={false}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onTap={handleTap}
-          whileTap={{ scale: 0.99 }}
-        >
-            <img
-              className="swipe-card-img"
-              src={photoOf(current)}
-              alt={current.name}
-              draggable={false}
-              onError={(e: any) => { if (!e.target.src.endsWith("/placeholder-avatar.svg")) e.target.src = "/placeholder-avatar.svg"; }}
-            />
-
-            {/* Rank badge (top-left) */}
-            <div className={`swipe-badge rank ${rank === 1 ? "gold" : rank === 2 ? "silver" : rank === 3 ? "bronze" : ""}`}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M2 19h20v2H2v-2zm18-9l-3 9H7L4 10l4 3 4-6 4 6 4-3z" />
-              </svg>
-              #{rank} <span style={{ fontSize: "0.58rem", opacity: 0.85 }}>AU CLASSEMENT</span>
-            </div>
-
-            {/* Votes badge (top-right) */}
-            <div className="swipe-badge votes">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--blue)">
-                <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-              </svg>
-              {fmtVotes(current.totalVotes)}
-            </div>
-
-            {/* Swipe indicators — direction du carrousel */}
-            <motion.div className="swipe-stamp next" style={{ opacity: nextOpacity }}>
-              {t.next || "Suivant"}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-            </motion.div>
-            <motion.div className="swipe-stamp prev" style={{ opacity: prevOpacity }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
-              {t.previous || "Précédent"}
-            </motion.div>
-
-            {/* Double-tap heart */}
-            <AnimatePresence>
-              {heartBurst > 0 && (
-                <motion.div
-                  key={heartBurst}
-                  className="swipe-heart-burst"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: [0, 1.25, 1], opacity: [0, 1, 0] }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.8, times: [0, 0.4, 1] }}
-                >
-                  <svg width="120" height="120" viewBox="0 0 24 24" fill="#EF4444" style={{ filter: "drop-shadow(0 4px 16px rgba(239,68,68,0.6))" }}>
-                    <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-                  </svg>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Bottom info overlay */}
-            <div className="swipe-overlay">
-              <div className="name">{current.name}</div>
-              <span className="swipe-cat">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M2 19h20v2H2v-2zm18-9l-3 9H7L4 10l4 3 4-6 4 6 4-3z" /></svg>
-                {current.category || "Miss"}
-                {current.city ? ` · ${current.city}` : ""}
-              </span>
-              {current.bio && <div className="swipe-bio">{current.bio}</div>}
-              <Socials c={current} isLiked={isLiked} onLike={handleHeartButton} />
-            </div>
-        </motion.div>
+        {/* ── Cartes empilées : chaque candidat est un élément keyé.
+             L'ancienne carte sort d'un côté pendant que la nouvelle entre
+             de l'autre — les gestes rapides restent toujours fluides. ── */}
+        <AnimatePresence initial={false} custom={direction}>
+          <DeckCard
+            key={current.id}
+            c={current}
+            photo={photoOf(current)}
+            direction={direction}
+            rank={rank}
+            votesLabel={fmtVotes(current.totalVotes)}
+            isLiked={isLiked}
+            heartBurst={heartBurst}
+            nextLabel={t.next || "Suivant"}
+            prevLabel={t.previous || "Précédent"}
+            onDragEnd={handleDragEnd}
+            onTap={handleTap}
+            onHeart={handleHeartButton}
+          />
+        </AnimatePresence>
 
         {/* Right arrow → next */}
         <button className="swipe-arrow right" onClick={() => paginate(1)} disabled={!next} aria-label="Suivant">
@@ -465,6 +352,134 @@ export default function SwipeDeck({
         {t.swipeHint || "Glissez à gauche ou à droite pour découvrir d'autres candidats"}
       </div>
     </div>
+  );
+}
+
+/* ── Une carte du deck : possède son propre motionValue x, donc sa rotation
+     et ses tampons de direction suivent le doigt sans état partagé. ── */
+function DeckCard({
+  c,
+  photo,
+  direction,
+  rank,
+  votesLabel,
+  isLiked,
+  heartBurst,
+  nextLabel,
+  prevLabel,
+  onDragEnd,
+  onTap,
+  onHeart,
+}: {
+  c: SwipeCandidate;
+  photo: string;
+  direction: 1 | -1;
+  rank: number;
+  votesLabel: string;
+  isLiked: boolean;
+  heartBurst: number;
+  nextLabel: string;
+  prevLabel: string;
+  onDragEnd: (e: any, info: { offset: { x: number }; velocity: { x: number } }) => void;
+  onTap: () => void;
+  onHeart: () => void;
+}) {
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-260, 0, 260], [-13, 0, 13]);
+  const nextOpacity = useTransform(x, [-140, -30], [1, 0]); // glisse à gauche → suivant
+  const prevOpacity = useTransform(x, [30, 140], [0, 1]); // glisse à droite → précédent
+  const [dragging, setDragging] = useState(false);
+
+  return (
+    <motion.div
+      className="swipe-card"
+      style={{ x, rotate }}
+      custom={direction}
+      variants={cardVariants}
+      initial="enter"
+      animate="center"
+      exit="exit"
+      transition={{ x: { type: "spring", stiffness: 300, damping: 30 } }}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={1}
+      dragMomentum={false}
+      onDragStart={() => setDragging(true)}
+      onDragEnd={(e, info) => {
+        setDragging(false);
+        onDragEnd(e, info);
+      }}
+      onTap={onTap}
+      whileTap={{ scale: 0.99 }}
+    >
+      <img
+        className="swipe-card-img"
+        src={photo}
+        alt={c.name}
+        draggable={false}
+        onError={(e: any) => { if (!e.target.src.endsWith("/placeholder-avatar.svg")) e.target.src = "/placeholder-avatar.svg"; }}
+      />
+
+      {/* Rank badge (top-left) */}
+      <div className={`swipe-badge rank ${rank === 1 ? "gold" : rank === 2 ? "silver" : rank === 3 ? "bronze" : ""}`}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M2 19h20v2H2v-2zm18-9l-3 9H7L4 10l4 3 4-6 4 6 4-3z" />
+        </svg>
+        #{rank} <span style={{ fontSize: "0.58rem", opacity: 0.85 }}>AU CLASSEMENT</span>
+      </div>
+
+      {/* Votes badge (top-right) */}
+      <div className="swipe-badge votes">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--blue)">
+          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+        </svg>
+        {votesLabel}
+      </div>
+
+      {/* Direction stamps — visibles uniquement pendant le glissement */}
+      {dragging && (
+        <>
+          <motion.div className="swipe-stamp next" style={{ opacity: nextOpacity }}>
+            {nextLabel}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </motion.div>
+          <motion.div className="swipe-stamp prev" style={{ opacity: prevOpacity }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+            {prevLabel}
+          </motion.div>
+        </>
+      )}
+
+      {/* Double-tap heart */}
+      <AnimatePresence>
+        {heartBurst > 0 && (
+          <motion.div
+            key={heartBurst}
+            className="swipe-heart-burst"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: [0, 1.25, 1], opacity: [0, 1, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, times: [0, 0.4, 1] }}
+          >
+            <svg width="120" height="120" viewBox="0 0 24 24" fill="#EF4444" style={{ filter: "drop-shadow(0 4px 16px rgba(239,68,68,0.6))" }}>
+              <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+            </svg>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom info overlay */}
+      <div className="swipe-overlay">
+        <div className="name">{c.name}</div>
+        <span className="swipe-cat">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M2 19h20v2H2v-2zm18-9l-3 9H7L4 10l4 3 4-6 4 6 4-3z" /></svg>
+          {c.category || "Miss"}
+          {c.city ? ` · ${c.city}` : ""}
+        </span>
+        {c.bio && <div className="swipe-bio">{c.bio}</div>}
+        <Socials c={c} isLiked={isLiked} onLike={onHeart} />
+      </div>
+    </motion.div>
   );
 }
 
