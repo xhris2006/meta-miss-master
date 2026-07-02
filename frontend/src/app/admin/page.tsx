@@ -56,6 +56,7 @@ export default function AdminPage() {
   const [contests, setContests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [candSearch, setCandSearch] = useState("");
 
   const [viewingCandidate, setViewingCandidate] = useState<any>(null);
   const [editingCandidate, setEditingCandidate] = useState<any>(null);
@@ -229,25 +230,37 @@ export default function AdminPage() {
 
   const SidebarContent = () => (
     <>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 4px", marginBottom: 8 }}>
-        <div style={{ width: 42, height: 42, borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+      {/* Brand */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "2px 6px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <div style={{ width: 42, height: 42, borderRadius: 13, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", display: "grid", placeItems: "center", flexShrink: 0, boxShadow: "0 6px 16px rgba(37,99,235,0.4)" }}>
           <LayoutDashboard size={18} color="#fff" />
         </div>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#0F172A" }}>MetaMiss Admin</div>
-          <div style={{ fontSize: 12, color: "#94A3B8" }}>{user?.name || "Admin"}</div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 14.5, fontWeight: 800, color: "#F8FAFC", letterSpacing: "-0.01em" }}>MetaMiss <span style={{ color: "#60A5FA" }}>Admin</span></div>
+          <div style={{ fontSize: 11.5, color: "#64748B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.name || "Administrateur"}</div>
         </div>
       </div>
+
+      <div style={{ fontSize: 10, fontWeight: 800, color: "#475569", letterSpacing: "0.16em", textTransform: "uppercase", padding: "2px 8px" }}>Menu</div>
       <nav style={{ display: "grid", gap: 3 }}>
-        {navItems.map(({ key, Icon, label }) => (
-          <button key={key} onClick={() => { setTab(key); setSidebarOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderRadius: 12, border: "none", cursor: "pointer", background: tab === key ? "linear-gradient(135deg,#6366F118,#8B5CF618)" : "transparent", color: tab === key ? "#6366F1" : "#64748B", fontWeight: tab === key ? 700 : 500, fontSize: 14, borderLeft: tab === key ? "3px solid #6366F1" : "3px solid transparent", textAlign: "left", fontFamily: "inherit" }}>
-            <Icon size={16} /> {label}
-          </button>
-        ))}
+        {navItems.map(({ key, Icon, label }) => {
+          const active = tab === key;
+          const pending = key === "candidates" ? (stats?.pendingCandidates || 0) : 0;
+          return (
+            <button key={key} onClick={() => { setTab(key); setSidebarOpen(false); }} style={{ position: "relative", width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", borderRadius: 11, border: "none", cursor: "pointer", background: active ? "linear-gradient(90deg, rgba(37,99,235,0.28), rgba(37,99,235,0.08))" : "transparent", color: active ? "#fff" : "#94A3B8", fontWeight: active ? 700 : 500, fontSize: 13.5, textAlign: "left", fontFamily: "inherit", transition: "background 0.18s, color 0.18s" }}>
+              {active && <span style={{ position: "absolute", left: -18, top: "22%", bottom: "22%", width: 3.5, borderRadius: 100, background: "#3B82F6" }} />}
+              <Icon size={16} color={active ? "#60A5FA" : "#64748B"} /> {label}
+              {pending > 0 && (
+                <span style={{ marginLeft: "auto", background: "#F59E0B", color: "#0F172A", fontSize: 10.5, fontWeight: 800, borderRadius: 100, padding: "2px 8px" }}>{pending}</span>
+              )}
+            </button>
+          );
+        })}
       </nav>
-      <div style={{ marginTop: "auto", display: "grid", gap: 8 }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, background: "#F8FAFF", color: "#64748B", textDecoration: "none", fontSize: 13, fontWeight: 500 }}>← Retour au site</Link>
-        <button onClick={() => { logout(); router.push("/"); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, background: "#FEF2F2", color: "#EF4444", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, width: "100%", fontFamily: "inherit" }}>
+
+      <div style={{ marginTop: "auto", display: "grid", gap: 6, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 13px", borderRadius: 11, background: "rgba(255,255,255,0.04)", color: "#94A3B8", textDecoration: "none", fontSize: 13, fontWeight: 600 }}>← Retour au site</Link>
+        <button onClick={() => { logout(); router.push("/"); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 13px", borderRadius: 11, background: "rgba(239,68,68,0.12)", color: "#F87171", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, width: "100%", fontFamily: "inherit" }}>
           <LogOut size={14} /> Déconnexion
         </button>
       </div>
@@ -255,7 +268,7 @@ export default function AdminPage() {
   );
 
   const statCards = stats ? [
-    { Icon: Users, val: stats.totalUsers, label: "Utilisateurs", color: "#6366F1" },
+    { Icon: Users, val: stats.totalUsers, label: "Utilisateurs", color: "#2563EB" },
     { Icon: CheckCircle2, val: (stats.totalVotes||0).toLocaleString("fr-FR"), label: "Votes validés", color: "#10B981" },
     { Icon: XCircle, val: stats.pendingCandidates, label: "Candidatures en attente", color: "#F59E0B" },
     { Icon: CreditCard, val: stats.completedPayments, label: "Paiements complétés", color: "#2563EB" },
@@ -264,37 +277,41 @@ export default function AdminPage() {
   ] : [];
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: S.bg, fontFamily: "system-ui,sans-serif" }}>
+    // min-height compense le zoom 0.84 du body pour couvrir tout l'écran
+    <div style={{ display: "flex", minHeight: "calc(100vh / 0.84)", background: S.bg, fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
 
-      <aside className="admin-desktop-sidebar" style={{ display: "none", flexDirection: "column", gap: 16, position: "fixed", top: 0, left: 0, bottom: 0, width: 260, background: "#fff", borderRight: "1px solid #E2E8F0", padding: "28px 18px", zIndex: 50 }}>
+      <aside className="admin-desktop-sidebar" style={{ display: "none", flexDirection: "column", gap: 14, position: "fixed", top: 0, left: 0, bottom: 0, width: 260, background: "#0B1226", borderRight: "1px solid #16213D", padding: "24px 18px", zIndex: 50 }}>
         <SidebarContent />
       </aside>
 
-      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 60, backdropFilter: "blur(4px)" }} />}
-      <aside style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 270, background: "#fff", borderRight: "1px solid #E2E8F0", padding: "28px 18px", zIndex: 70, display: "flex", flexDirection: "column", gap: 16, transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform .25s ease" }}>
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", zIndex: 60, backdropFilter: "blur(4px)" }} />}
+      <aside style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 272, background: "#0B1226", borderRight: "1px solid #16213D", padding: "24px 18px", zIndex: 70, display: "flex", flexDirection: "column", gap: 14, transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform .28s cubic-bezier(0.22,1,0.36,1)", boxShadow: sidebarOpen ? "0 0 60px rgba(0,0,0,0.4)" : "none" }}>
         <SidebarContent />
       </aside>
 
-      <main className="admin-main-content" style={{ flex: 1, minHeight: "100vh", padding: "24px 20px 60px" }}>
+      <main className="admin-main-content" style={{ flex: 1, minHeight: "100vh", padding: "20px 20px 60px" }}>
+       <div style={{ maxWidth: 1180, margin: "0 auto" }}>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
-          <button className="admin-menu-btn" onClick={() => setSidebarOpen(true)} style={{ width: 44, height: 44, borderRadius: 14, border: "1.5px solid #E2E8F0", background: "#fff", display: "grid", placeItems: "center", cursor: "pointer" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24, padding: "10px 0" }}>
+          <button className="admin-menu-btn" onClick={() => setSidebarOpen(true)} style={{ width: 42, height: 42, borderRadius: 13, border: "1px solid #E2E8F0", background: "#fff", display: "grid", placeItems: "center", cursor: "pointer", boxShadow: "0 1px 3px rgba(15,23,42,0.06)" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
           </button>
-          <div style={{ flex: 1 }}>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0F172A" }}>{navItems.find(n=>n.key===tab)?.label}</h1>
-            <p style={{ margin: "3px 0 0", color: "#94A3B8", fontSize: 13 }}>{tab === "candidates" ? `${candidates.length} candidats` : "Panneau d'administration"}</p>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>
+              Administration · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+            </div>
+            <h1 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: "#0F172A", letterSpacing: "-0.02em" }}>{navItems.find(n=>n.key===tab)?.label}</h1>
           </div>
           {tab === "candidates" && (
-            <button onClick={openCreate} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px #6366F130", fontFamily: "inherit" }}>
+            <button onClick={openCreate} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 13, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13.5, boxShadow: "0 4px 16px #2563EB35", fontFamily: "inherit" }}>
               <Plus size={16} /> Ajouter
             </button>
           )}
-          <button onClick={load} style={{ width: 44, height: 44, borderRadius: 12, border: "1.5px solid #E2E8F0", background: "#fff", color: "#64748B", cursor: "pointer", fontSize: 18, display: "grid", placeItems: "center" }}>↺</button>
+          <button onClick={load} title="Actualiser" style={{ width: 42, height: 42, borderRadius: 13, border: "1px solid #E2E8F0", background: "#fff", color: "#64748B", cursor: "pointer", fontSize: 17, display: "grid", placeItems: "center", boxShadow: "0 1px 3px rgba(15,23,42,0.06)" }}>↺</button>
         </div>
 
         {loading ? (
-          <div style={{ minHeight: 300, display: "grid", placeItems: "center", color: "#94A3B8" }}>Chargement...</div>
+          <div style={{ minHeight: 320, display: "grid", placeItems: "center" }}><div className="spinner" /></div>
         ) : (<>
 
           {tab === "overview" && (
@@ -347,10 +364,34 @@ export default function AdminPage() {
             </>
           )}
 
-          {tab === "candidates" && (
+          {tab === "candidates" && (() => {
+            const q = candSearch.trim().toLowerCase();
+            const shown = candidates.filter(c => !q || c.name?.toLowerCase().includes(q) || c.city?.toLowerCase().includes(q));
+            const statusLabel: Record<string, string> = { APPROVED: "Approuvé", PENDING: "En attente", REJECTED: "Rejeté" };
+            return (
             <div style={{ display: "grid", gap: 12 }}>
-              {candidates.map((c, i) => {
+              {/* Barre de recherche + compteur */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 220, display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #E2E8F0", borderRadius: 13, padding: "11px 14px", boxShadow: "0 1px 3px rgba(15,23,42,0.05)" }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                  <input value={candSearch} onChange={e => setCandSearch(e.target.value)} placeholder="Rechercher par nom ou ville..." style={{ flex: 1, border: "none", outline: "none", background: "none", fontSize: 13.5, color: "#0F172A", fontFamily: "inherit" }} />
+                </div>
+                <div style={{ fontSize: 12.5, color: "#64748B", fontWeight: 600 }}>
+                  {shown.length}/{candidates.length} candidat{candidates.length > 1 ? "s" : ""}
+                  {stats?.pendingCandidates > 0 && <span style={{ ...S.pill("#F59E0B"), marginLeft: 8 }}>{stats.pendingCandidates} en attente</span>}
+                </div>
+              </div>
+
+              {shown.length === 0 && (
+                <div style={{ ...S.card, padding: "48px 24px", textAlign: "center", border: "2px dashed #E2E8F0" }}>
+                  <Users size={40} color="#CBD5E1" style={{ margin: "0 auto 16px" }} />
+                  <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 15 }}>{q ? "Aucun candidat trouvé" : "Aucun candidat"}</div>
+                </div>
+              )}
+
+              {shown.map((c) => {
                 const photo = c.photoUrl?.startsWith("http") ? c.photoUrl : `${apiBase}${c.photoUrl}`;
+                const rank = candidates.indexOf(c) + 1;
                 return (
                   <div key={c.id} className="acand-row" style={{ ...S.card }}>
                     <div className="acand-main" onClick={() => setViewingCandidate(c)}>
@@ -359,18 +400,18 @@ export default function AdminPage() {
                       </div>
                       <div className="acand-info">
                         <div className="acand-top">
-                          <span className="acand-rank">#{String(i + 1).padStart(2, "0")}</span>
-                          <span className="acand-dot" style={{ background: sc(c.status) }} title={c.status} />
+                          <span className="acand-rank">#{String(rank).padStart(2, "0")}</span>
+                          <span style={S.pill(sc(c.status))}>{statusLabel[c.status] || c.status}</span>
                         </div>
                         <div className="acand-name">{c.name}</div>
-                        <div className="acand-sub">{c.city || "—"}</div>
+                        <div className="acand-sub">{c.city || "—"}{c.age ? ` · ${c.age} ans` : ""}</div>
                         <div className="acand-votes">
-                          <Trophy size={13} color="#F59E0B" /> {c.totalVotes ?? 0}
+                          <Trophy size={13} color="#F59E0B" /> {(c.totalVotes ?? 0).toLocaleString("fr-FR")} votes
                         </div>
                       </div>
                     </div>
                     <div className="acand-actions">
-                      <button onClick={() => openEdit(c)} title="Modifier"><Edit3 size={16} color="#6366F1" /></button>
+                      <button onClick={() => openEdit(c)} title="Modifier"><Edit3 size={16} color="#2563EB" /></button>
                       {c.status === "PENDING"
                         ? <button onClick={() => approve(c.id)} title="Approuver"><CheckCircle2 size={16} color="#10B981" /></button>
                         : <button onClick={() => handleCandidatePdf(c)} title="Fiche PDF"><FileDown size={16} color="#2563EB" /></button>}
@@ -380,7 +421,8 @@ export default function AdminPage() {
                 );
               })}
             </div>
-          )}
+            );
+          })()}
 
           {tab === "payments" && (
             <div style={{ display: "grid", gap: 14 }}>
@@ -390,7 +432,7 @@ export default function AdminPage() {
                   <strong style={{ color: "#10B981" }}>{payments.filter(p => p.status === "COMPLETED").length}</strong> complétée(s) ·{" "}
                   Revenus : <strong style={{ color: "#0F172A" }}>{payments.filter(p => p.status === "COMPLETED").reduce((s, p) => s + (p.amount || 0), 0).toLocaleString("fr-FR")} FCFA</strong>
                 </div>
-                <button onClick={handleTransactionsPdf} disabled={exportingTx} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px #6366F130", opacity: exportingTx ? 0.6 : 1, fontFamily: "inherit" }}>
+                <button onClick={handleTransactionsPdf} disabled={exportingTx} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px #2563EB30", opacity: exportingTx ? 0.6 : 1, fontFamily: "inherit" }}>
                   <FileDown size={16} /> {exportingTx ? "Génération..." : "Télécharger PDF (toutes)"}
                 </button>
               </div>
@@ -411,7 +453,7 @@ export default function AdminPage() {
                         <div style={{ fontSize: 13, color: "#94A3B8", marginTop: 2 }}>{p.user?.email || "—"}</div>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontWeight: 800, color: "#6366F1", fontSize: 16 }}>{(p.amount || 0).toLocaleString("fr-FR")} FCFA</div>
+                        <div style={{ fontWeight: 800, color: "#2563EB", fontSize: 16 }}>{(p.amount || 0).toLocaleString("fr-FR")} FCFA</div>
                         <span style={{ ...S.pill(sc(p.status)), display: "inline-block", marginTop: 4 }}>{p.status}</span>
                       </div>
                     </div>
@@ -436,7 +478,7 @@ export default function AdminPage() {
                     <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 17 }}>🏆 Concours</div>
                     <div style={{ color: "#94A3B8", fontSize: 13, marginTop: 2 }}>{contests.length} concours enregistré{contests.length > 1 ? "s" : ""}</div>
                   </div>
-                  <button onClick={() => setShowCreateContest(true)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
+                  <button onClick={() => setShowCreateContest(true)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
                     <Plus size={16} /> Nouveau concours
                   </button>
                 </div>
@@ -463,7 +505,7 @@ export default function AdminPage() {
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <button onClick={() => { setEditingContest(ct); setEditContestValues({ name: ct.name, startDate: toLocalInput(ct.startDate), endDate: toLocalInput(ct.endDate) }); }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #6366F130", background: "#6366F110", color: "#6366F1", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>✏️ Modifier</button>
+                          <button onClick={() => { setEditingContest(ct); setEditContestValues({ name: ct.name, startDate: toLocalInput(ct.startDate), endDate: toLocalInput(ct.endDate) }); }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #2563EB30", background: "#2563EB10", color: "#2563EB", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>✏️ Modifier</button>
                           {isOpen
                             ? <button onClick={async () => { if (!confirm("Fermer ce concours ?")) return; try { await api.patch(`/admin/contest/${ct.id}/close`); toast.success("Concours fermé"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #EF444430", background: "#EF444410", color: "#EF4444", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Fermer</button>
                             : <button onClick={async () => { try { await api.patch(`/admin/contest/${ct.id}/open`); toast.success("Concours ouvert ✓"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #10B98130", background: "#10B98110", color: "#10B981", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Ouvrir</button>
@@ -477,7 +519,7 @@ export default function AdminPage() {
 
               <div style={{ ...S.card, padding: "24px 22px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                  <Globe size={20} color="#6366F1" />
+                  <Globe size={20} color="#2563EB" />
                   <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 17 }}>Réseaux sociaux</div>
                 </div>
                 <p style={{ fontSize: 13, color: "#94A3B8", marginBottom: 20 }}>Ces liens seront affichés sur la page Support pour les visiteurs.</p>
@@ -495,7 +537,7 @@ export default function AdminPage() {
                       <input type="url" value={(socialValues as any)[field.key]} onChange={e => setSocialValues({ ...socialValues, [field.key]: e.target.value })} placeholder={field.placeholder} style={S.inp} />
                     </div>
                   ))}
-                  <button onClick={saveSocial} disabled={socialSaving} style={{ marginTop: 4, padding: "13px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: socialSaving ? 0.7 : 1, fontFamily: "inherit" }}>
+                  <button onClick={saveSocial} disabled={socialSaving} style={{ marginTop: 4, padding: "13px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: socialSaving ? 0.7 : 1, fontFamily: "inherit" }}>
                     {socialSaving ? "Enregistrement..." : "✓ Enregistrer les réseaux"}
                   </button>
                 </div>
@@ -512,13 +554,13 @@ export default function AdminPage() {
                       <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 14 }}>{u.name}</div>
                       <div style={{ fontSize: 13, color: "#94A3B8", marginTop: 2 }}>{u.email}</div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
-                        <span style={S.pill(u.role==="ADMIN"?"#EF4444":"#6366F1")}>{u.role}</span>
+                        <span style={S.pill(u.role==="ADMIN"?"#EF4444":"#2563EB")}>{u.role}</span>
                         <span style={{ fontSize: 12, color: "#94A3B8" }}>{new Date(u.createdAt).toLocaleDateString("fr-FR")}</span>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "#2563EB" }}>🗳 {u.totalVotes ?? u._count?.votes ?? 0} votes</span>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => { setEditingUser(u); setEditUserValues({ name: u.name||"", email: u.email||"", role: u.role||"USER" }); }} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #E2E8F0", background: "#F8FAFF", cursor: "pointer", display: "grid", placeItems: "center" }}><Edit3 size={15} color="#6366F1" /></button>
+                      <button onClick={() => { setEditingUser(u); setEditUserValues({ name: u.name||"", email: u.email||"", role: u.role||"USER" }); }} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #E2E8F0", background: "#F8FAFF", cursor: "pointer", display: "grid", placeItems: "center" }}><Edit3 size={15} color="#2563EB" /></button>
                       <button onClick={async () => { if (!confirm(`Supprimer ${u.name} ?`)) return; try { await api.delete(`/admin/users/${u.id}`); toast.success("Supprimé"); load(); } catch { toast.error("Erreur"); } }} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #FEE2E2", background: "#FFF5F5", cursor: "pointer", display: "grid", placeItems: "center" }}><Trash2 size={15} color="#EF4444" /></button>
                     </div>
                   </div>
@@ -527,6 +569,7 @@ export default function AdminPage() {
             </div>
           )}
         </>)}
+       </div>
       </main>
 
       {viewingCandidate && (
@@ -561,7 +604,7 @@ export default function AdminPage() {
             ))}
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
               <button style={{ flex: 1, fontSize: "0.82rem", background: "#2563EB", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => handleCandidatePdf(viewingCandidate)}><FileDown size={15} /> PDF</button>
-              <button className="btn-blue" style={{ flex: 1, fontSize: "0.82rem", background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }} onClick={() => { setViewingCandidate(null); openEdit(viewingCandidate); }}>✏️ Modifier</button>
+              <button className="btn-blue" style={{ flex: 1, fontSize: "0.82rem", background: "linear-gradient(135deg,#1D4ED8,#3B82F6)" }} onClick={() => { setViewingCandidate(null); openEdit(viewingCandidate); }}>✏️ Modifier</button>
               {viewingCandidate.status === "PENDING" && (
                 <button style={{ flex: 1, fontSize: "0.82rem", background: "#10B981", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { approve(viewingCandidate.id); setViewingCandidate(null); }}>✓ Approuver</button>
               )}
@@ -635,7 +678,7 @@ export default function AdminPage() {
                   <input key={k} value={(editValues as any)[k]} onChange={e => setEditValues({...editValues,[k]:e.target.value})} placeholder={p} style={S.inp} />
                 ))}
               </div>
-              <button onClick={saveCandidate} disabled={saving} style={{ marginTop: 4, padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: saving ? 0.6 : 1, fontFamily: "inherit" }}>
+              <button onClick={saveCandidate} disabled={saving} style={{ marginTop: 4, padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: saving ? 0.6 : 1, fontFamily: "inherit" }}>
                 {saving ? "Enregistrement..." : isCreating ? "✓ Créer le candidat" : "✓ Enregistrer les modifications"}
               </button>
             </div>
@@ -665,7 +708,7 @@ export default function AdminPage() {
               <div style={{ padding: "10px 14px", borderRadius: 10, background: "#F8FAFF", border: "1px solid #E2E8F0", fontSize: 13, color: "#64748B" }}>
                 🗳 Votes effectués : <strong>{editingUser.totalVotes ?? editingUser._count?.votes ?? 0}</strong>
               </div>
-              <button disabled={editUserSaving} onClick={async () => { setEditUserSaving(true); try { await api.patch(`/admin/users/${editingUser.id}`, editUserValues); toast.success("Mis à jour ✓"); setEditingUser(null); load(); } catch { toast.error("Erreur"); } setEditUserSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: editUserSaving ? 0.6 : 1, fontFamily: "inherit" }}>
+              <button disabled={editUserSaving} onClick={async () => { setEditUserSaving(true); try { await api.patch(`/admin/users/${editingUser.id}`, editUserValues); toast.success("Mis à jour ✓"); setEditingUser(null); load(); } catch { toast.error("Erreur"); } setEditUserSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: editUserSaving ? 0.6 : 1, fontFamily: "inherit" }}>
                 {editUserSaving ? "Enregistrement..." : "✓ Enregistrer"}
               </button>
             </div>
@@ -690,7 +733,7 @@ export default function AdminPage() {
                 <input type="datetime-local" value={editContestValues.endDate} onChange={e => setEditContestValues({...editContestValues,endDate:e.target.value})} style={S.inp} />
                 {editContestValues.endDate && <button onClick={() => setEditContestValues({...editContestValues,endDate:""})} style={{ marginTop: 4, fontSize: 11, color: "#EF4444", background: "none", border: "none", cursor: "pointer" }}>× Supprimer date fin</button>}
               </div>
-              <button disabled={editContestSaving} onClick={async () => { setEditContestSaving(true); try { await api.patch(`/admin/contest/${editingContest.id}`, { name: editContestValues.name, startDate: toISO(editContestValues.startDate), endDate: editContestValues.endDate ? toISO(editContestValues.endDate) : null }); toast.success("Mis à jour ✓"); setEditingContest(null); load(); } catch { toast.error("Erreur"); } setEditContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
+              <button disabled={editContestSaving} onClick={async () => { setEditContestSaving(true); try { await api.patch(`/admin/contest/${editingContest.id}`, { name: editContestValues.name, startDate: toISO(editContestValues.startDate), endDate: editContestValues.endDate ? toISO(editContestValues.endDate) : null }); toast.success("Mis à jour ✓"); setEditingContest(null); load(); } catch { toast.error("Erreur"); } setEditContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
                 {editContestSaving ? "Enregistrement..." : "✓ Enregistrer"}
               </button>
             </div>
@@ -712,7 +755,7 @@ export default function AdminPage() {
               <div><label style={S.lbl}>Date et heure de début *</label><input type="datetime-local" value={newContest.startDate} onChange={e => setNewContest({...newContest,startDate:e.target.value})} style={S.inp} /></div>
               <div><label style={S.lbl}>Date et heure de fin <span style={{ fontWeight: 400, textTransform: "none" }}>(optionnelle)</span></label><input type="datetime-local" value={newContest.endDate} onChange={e => setNewContest({...newContest,endDate:e.target.value})} style={S.inp} /></div>
               <div style={{ padding: "12px 14px", borderRadius: 12, background: "#F0FDF4", border: "1px solid #BBF7D0", fontSize: 13, color: "#16A34A" }}>ℹ️ Le concours sera immédiatement ouvert dès la création. Le compte à rebours de l'accueil se base sur la date et l'heure de début.</div>
-              <button disabled={contestSaving||!newContest.name||!newContest.startDate} onClick={async () => { if (!newContest.name||!newContest.startDate) { toast.error("Nom et date requis"); return; } setContestSaving(true); try { await api.post("/admin/contest", { name: newContest.name, startDate: toISO(newContest.startDate), ...(newContest.endDate&&{endDate:toISO(newContest.endDate)}) }); toast.success("Concours créé ✓"); setShowCreateContest(false); setNewContest({name:"",startDate:"",endDate:""}); load(); } catch(err:any) { toast.error(err?.response?.data?.message||"Erreur"); } setContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#6366F1,#8B5CF6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: (!newContest.name||!newContest.startDate)?0.5:1, fontFamily: "inherit" }}>
+              <button disabled={contestSaving||!newContest.name||!newContest.startDate} onClick={async () => { if (!newContest.name||!newContest.startDate) { toast.error("Nom et date requis"); return; } setContestSaving(true); try { await api.post("/admin/contest", { name: newContest.name, startDate: toISO(newContest.startDate), ...(newContest.endDate&&{endDate:toISO(newContest.endDate)}) }); toast.success("Concours créé ✓"); setShowCreateContest(false); setNewContest({name:"",startDate:"",endDate:""}); load(); } catch(err:any) { toast.error(err?.response?.data?.message||"Erreur"); } setContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: (!newContest.name||!newContest.startDate)?0.5:1, fontFamily: "inherit" }}>
                 {contestSaving ? "Création..." : "✓ Créer le concours"}
               </button>
             </div>
@@ -732,24 +775,33 @@ export default function AdminPage() {
         .admin-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         @media (min-width: 560px) { .admin-stats { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
         @media (min-width: 1100px) { .admin-stats { grid-template-columns: repeat(6, 1fr); } }
-        .admin-stat-c { padding: 14px; border-radius: 16px !important; }
-        .admin-stat-c .ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 10px; }
-        .admin-stat-c .v { font-size: 1.35rem; font-weight: 800; color: #0F172A; line-height: 1.05; word-break: break-word; }
-        .admin-stat-c .l { margin-top: 4px; font-size: 0.7rem; color: #94A3B8; line-height: 1.25; }
-        .acand-row { display: flex; align-items: stretch; padding: 0 !important; overflow: hidden; }
-        .acand-main { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; cursor: pointer; padding: 12px 14px; }
-        .acand-photo { width: 58px; height: 64px; border-radius: 12px; overflow: hidden; background: #EFF6FF; position: relative; flex-shrink: 0; }
+        .admin-stat-c {
+          position: relative; padding: 16px 14px 14px; border-radius: 16px !important;
+          box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .admin-stat-c:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(15,23,42,0.1); }
+        .admin-stat-c .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 12px; }
+        .admin-stat-c .v { font-size: 1.35rem; font-weight: 800; color: #0F172A; line-height: 1.05; word-break: break-word; letter-spacing: -0.02em; }
+        .admin-stat-c .l { margin-top: 5px; font-size: 0.66rem; color: #94A3B8; line-height: 1.3; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .acand-row {
+          display: flex; align-items: stretch; padding: 0 !important; overflow: hidden;
+          box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+          transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+        .acand-row:hover { border-color: #BFDBFE !important; box-shadow: 0 8px 22px rgba(37,99,235,0.1); }
+        .acand-main { display: flex; align-items: center; gap: 13px; flex: 1; min-width: 0; cursor: pointer; padding: 12px 14px; }
+        .acand-photo { width: 60px; height: 68px; border-radius: 13px; overflow: hidden; background: #EFF6FF; position: relative; flex-shrink: 0; border: 1px solid #E2E8F0; }
         .acand-info { flex: 1; min-width: 0; }
-        .acand-top { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
-        .acand-rank { background: #2563EB; color: #fff; font-size: 0.7rem; font-weight: 800; padding: 2px 10px; border-radius: 100px; letter-spacing: 0.02em; }
-        .acand-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .acand-name { font-weight: 800; color: #0F172A; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .acand-top { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; flex-wrap: wrap; }
+        .acand-rank { background: #0F172A; color: #fff; font-size: 0.68rem; font-weight: 800; padding: 2px 9px; border-radius: 100px; letter-spacing: 0.03em; }
+        .acand-name { font-weight: 800; color: #0F172A; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
         .acand-sub { font-size: 0.74rem; color: #94A3B8; margin-top: 1px; }
-        .acand-votes { display: flex; align-items: center; gap: 5px; margin-top: 7px; font-size: 0.8rem; font-weight: 800; color: #B45309; }
+        .acand-votes { display: flex; align-items: center; gap: 5px; margin-top: 7px; font-size: 0.78rem; font-weight: 800; color: #B45309; }
         .acand-actions { display: flex; flex-direction: column; border-left: 1px solid #EEF1F6; flex-shrink: 0; }
         .acand-actions button { flex: 1; width: 50px; border: none; background: #fff; cursor: pointer; display: grid; place-items: center; border-bottom: 1px solid #EEF1F6; transition: background 0.15s; }
         .acand-actions button:last-child { border-bottom: none; }
-        .acand-actions button:hover { background: #F8FAFF; }
+        .acand-actions button:hover { background: #EFF6FF; }
         .amodal-backdrop {
           position: fixed; inset: 0; z-index: 300;
           background: rgba(15,23,42,0.55); backdrop-filter: blur(4px);
