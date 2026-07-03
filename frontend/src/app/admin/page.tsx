@@ -57,6 +57,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [candSearch, setCandSearch] = useState("");
+  const [candFilter, setCandFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
 
   const [viewingCandidate, setViewingCandidate] = useState<any>(null);
   const [editingCandidate, setEditingCandidate] = useState<any>(null);
@@ -366,8 +367,18 @@ export default function AdminPage() {
 
           {tab === "candidates" && (() => {
             const q = candSearch.trim().toLowerCase();
-            const shown = candidates.filter(c => !q || c.name?.toLowerCase().includes(q) || c.city?.toLowerCase().includes(q));
+            const shown = candidates.filter(c =>
+              (candFilter === "ALL" || c.status === candFilter) &&
+              (!q || c.name?.toLowerCase().includes(q) || c.city?.toLowerCase().includes(q)),
+            );
             const statusLabel: Record<string, string> = { APPROVED: "Approuvé", PENDING: "En attente", REJECTED: "Rejeté" };
+            const countOf = (s: string) => candidates.filter(c => c.status === s).length;
+            const filters: { k: typeof candFilter; label: string; count: number; color: string }[] = [
+              { k: "ALL", label: "Tous", count: candidates.length, color: "#0F172A" },
+              { k: "PENDING", label: "En attente", count: countOf("PENDING"), color: "#F59E0B" },
+              { k: "APPROVED", label: "Approuvés", count: countOf("APPROVED"), color: "#10B981" },
+              { k: "REJECTED", label: "Rejetés", count: countOf("REJECTED"), color: "#EF4444" },
+            ];
             return (
             <div style={{ display: "grid", gap: 12 }}>
               {/* Barre de recherche + compteur */}
@@ -378,14 +389,45 @@ export default function AdminPage() {
                 </div>
                 <div style={{ fontSize: 12.5, color: "#64748B", fontWeight: 600 }}>
                   {shown.length}/{candidates.length} candidat{candidates.length > 1 ? "s" : ""}
-                  {stats?.pendingCandidates > 0 && <span style={{ ...S.pill("#F59E0B"), marginLeft: 8 }}>{stats.pendingCandidates} en attente</span>}
                 </div>
+              </div>
+
+              {/* Filtres par statut */}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {filters.map(f => {
+                  const active = candFilter === f.k;
+                  return (
+                    <button
+                      key={f.k}
+                      onClick={() => setCandFilter(f.k)}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 7,
+                        padding: "8px 14px", borderRadius: 100, cursor: "pointer",
+                        fontFamily: "inherit", fontSize: 12.5, fontWeight: 700,
+                        border: `1.5px solid ${active ? f.color : "#E2E8F0"}`,
+                        background: active ? f.color : "#fff",
+                        color: active ? "#fff" : "#64748B",
+                        boxShadow: active ? `0 4px 14px ${f.color}40` : "0 1px 3px rgba(15,23,42,0.05)",
+                        transition: "all 0.18s ease",
+                      }}
+                    >
+                      {f.label}
+                      <span style={{
+                        fontSize: 11, fontWeight: 800, borderRadius: 100, padding: "1px 7px",
+                        background: active ? "rgba(255,255,255,0.25)" : f.color + "18",
+                        color: active ? "#fff" : f.color,
+                      }}>{f.count}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {shown.length === 0 && (
                 <div style={{ ...S.card, padding: "48px 24px", textAlign: "center", border: "2px dashed #E2E8F0" }}>
                   <Users size={40} color="#CBD5E1" style={{ margin: "0 auto 16px" }} />
-                  <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 15 }}>{q ? "Aucun candidat trouvé" : "Aucun candidat"}</div>
+                  <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 15 }}>
+                    {q || candFilter !== "ALL" ? "Aucun candidat ne correspond à ce filtre" : "Aucun candidat"}
+                  </div>
                 </div>
               )}
 

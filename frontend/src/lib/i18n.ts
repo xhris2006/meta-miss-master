@@ -190,6 +190,9 @@ export const translations = {
     contactDevMsg: "Bonjour 👋 Je vous contacte depuis le site MetaMiss Master 2026. Je souhaite parler au développeur du site.",
     sponsorMsg: "Bonjour 👋 Je souhaite sponsoriser l'événement MetaMiss Master 2026. Pouvez-vous m'en dire plus sur les offres de partenariat ?",
     partnershipTitle: "Partenariat & Contact",
+    // Prochaine édition
+    applyNextEdition: "Postuler pour la prochaine édition",
+    applyNextEditionD: "Inscriptions ouvertes — réservez votre place dès maintenant",
     // Landing
     votesStartIn: "🗳️ Les votes commencent dans",
     votesOpenBanner: "🎉 Les votes sont ouverts !",
@@ -394,6 +397,9 @@ export const translations = {
     contactDevMsg: "Hello 👋 I'm contacting you from the MetaMiss Master 2026 website. I would like to talk to the website developer.",
     sponsorMsg: "Hello 👋 I would like to sponsor the MetaMiss Master 2026 event. Can you tell me more about the partnership offers?",
     partnershipTitle: "Partnership & Contact",
+    // Next edition
+    applyNextEdition: "Apply for the next edition",
+    applyNextEditionD: "Applications open — secure your spot now",
     // Landing
     votesStartIn: "🗳️ Voting starts in",
     votesOpenBanner: "🎉 Voting is open!",

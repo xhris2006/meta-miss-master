@@ -175,6 +175,31 @@ export default function LandingPage() {
           font-size: 0.84rem; font-weight: 800; text-decoration: none; transition: all 0.15s;
         }
         .lp-candidacy:hover { background: var(--blue-light); border-color: var(--blue); }
+
+        /* ── Postuler pour la prochaine édition ── */
+        .lp-next {
+          position: relative; overflow: hidden;
+          display: flex; align-items: center; gap: 13px; width: 100%;
+          margin-top: 10px; padding: 14px 16px; border-radius: 16px;
+          background: linear-gradient(135deg, #B45309, #F59E0B 60%, #FBBF24);
+          color: #fff; text-decoration: none;
+          box-shadow: 0 8px 24px rgba(245,158,11,0.35);
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+        .lp-next:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(245,158,11,0.45); }
+        .lp-next::after {
+          content: ""; position: absolute; top: 0; bottom: 0; width: 60px;
+          background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+          animation: lp-next-shine 3s ease-in-out infinite; left: -80px;
+        }
+        @keyframes lp-next-shine { 0%, 60% { left: -80px; } 100% { left: 110%; } }
+        .lp-next-ic {
+          width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+          background: rgba(255,255,255,0.22); display: grid; place-items: center; font-size: 1.15rem;
+        }
+        .lp-next-t { font-size: 0.86rem; font-weight: 800; line-height: 1.2; }
+        .lp-next-d { font-size: 0.66rem; opacity: 0.9; margin-top: 2px; line-height: 1.35; }
+        .lp-next-arrow { margin-left: auto; flex-shrink: 0; }
       `}</style>
 
       <div className="lp">
@@ -285,6 +310,18 @@ export default function LandingPage() {
             <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" />
           </svg>
           {t.becomeCandidate || "Devenir candidate"}
+        </Link>
+
+        {/* Postuler pour la prochaine édition */}
+        <Link href="/candidates/register" className="lp-next">
+          <span className="lp-next-ic">👑</span>
+          <span>
+            <span className="lp-next-t" style={{ display: "block" }}>{t.applyNextEdition || "Postuler pour la prochaine édition"}</span>
+            <span className="lp-next-d" style={{ display: "block" }}>{t.applyNextEditionD || "Inscriptions ouvertes — réservez votre place dès maintenant"}</span>
+          </span>
+          <svg className="lp-next-arrow" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
         </Link>
 
         {/* Partenariat : contacter le développeur / sponsoriser l'événement */}
