@@ -68,6 +68,11 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  // Ajustement manuel des votes (protégé par code de validation)
+  const [voteQty, setVoteQty] = useState("");
+  const [voteCode, setVoteCode] = useState("");
+  const [voteAdjusting, setVoteAdjusting] = useState(false);
+
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editUserValues, setEditUserValues] = useState({ name: "", email: "", role: "" });
   const [editUserSaving, setEditUserSaving] = useState(false);
@@ -160,6 +165,31 @@ export default function AdminPage() {
     setEditValues({ name: c.name||"", city: c.city||"", age: String(c.age||""), bio: c.bio||"", type: c.type||"MISS", status: c.status||"PENDING", instagram: c.instagram||"", tiktok: c.tiktok||"", snap: c.snap||"", whatsappFan: c.whatsappFan||"", phone: c.phone||"", email: c.email||"" });
     setPhotoFile(null);
     setPhotoPreview(c.photoUrl?.startsWith("http") ? c.photoUrl : `${apiBase}${c.photoUrl}`);
+    setVoteQty(""); setVoteCode("");
+  };
+
+  // Ajout/retrait manuel de votes — exige le code de validation (vérifié côté serveur)
+  const adjustVotes = async (sign: 1 | -1) => {
+    const qty = parseInt(voteQty, 10);
+    if (!Number.isInteger(qty) || qty <= 0) { toast.error("Entrez un nombre de votes valide"); return; }
+    if (!voteCode.trim()) { toast.error("Code de validation requis"); return; }
+    setVoteAdjusting(true);
+    try {
+      const res = await api.patch(`/admin/candidates/${editingCandidate.id}/votes`, {
+        delta: sign * qty,
+        code: voteCode.trim(),
+      });
+      const updated = res.data?.data;
+      toast.success(res.data?.message || "Votes ajustés ✓");
+      if (updated && typeof updated.totalVotes === "number") {
+        setEditingCandidate({ ...editingCandidate, totalVotes: updated.totalVotes });
+        setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? { ...c, totalVotes: updated.totalVotes } : c));
+      }
+      setVoteQty("");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Erreur — code invalide ou serveur indisponible");
+    }
+    setVoteAdjusting(false);
   };
   const openCreate = () => { setIsCreating(true); setEditingCandidate({}); setEditValues({ ...EMPTY_EDIT }); setPhotoFile(null); setPhotoPreview(null); };
 
@@ -720,6 +750,51 @@ export default function AdminPage() {
                   <input key={k} value={(editValues as any)[k]} onChange={e => setEditValues({...editValues,[k]:e.target.value})} placeholder={p} style={S.inp} />
                 ))}
               </div>
+
+              {/* ── Ajustement manuel des votes (candidat approuvé, code requis) ── */}
+              {!isCreating && editingCandidate.status === "APPROVED" && (
+                <div style={{ padding: 14, borderRadius: 14, background: "#FFFBEB", border: "1.5px solid #FDE68A", display: "grid", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                    <label style={{ ...S.lbl, marginBottom: 0, color: "#B45309" }}>🗳 Ajuster les votes</label>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#0F172A" }}>
+                      Actuel : {(editingCandidate.totalVotes ?? 0).toLocaleString("fr-FR")}
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <input
+                      type="number" min={1} value={voteQty}
+                      onChange={e => setVoteQty(e.target.value)}
+                      placeholder="Nombre de votes"
+                      style={{ ...S.inp, background: "#fff", borderColor: "#FDE68A" }}
+                    />
+                    <input
+                      type="password" inputMode="numeric" autoComplete="off" value={voteCode}
+                      onChange={e => setVoteCode(e.target.value)}
+                      placeholder="Code de validation *"
+                      style={{ ...S.inp, background: "#fff", borderColor: "#FDE68A" }}
+                    />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <button
+                      onClick={() => adjustVotes(1)}
+                      disabled={voteAdjusting || !voteQty || !voteCode.trim()}
+                      style={{ padding: "11px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: "inherit", background: "#10B981", color: "#fff", opacity: voteAdjusting || !voteQty || !voteCode.trim() ? 0.5 : 1 }}
+                    >
+                      + Ajouter
+                    </button>
+                    <button
+                      onClick={() => adjustVotes(-1)}
+                      disabled={voteAdjusting || !voteQty || !voteCode.trim()}
+                      style={{ padding: "11px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: "inherit", background: "#EF4444", color: "#fff", opacity: voteAdjusting || !voteQty || !voteCode.trim() ? 0.5 : 1 }}
+                    >
+                      − Réduire
+                    </button>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 11.5, color: "#92400E", lineHeight: 1.5 }}>
+                    Le code de validation est obligatoire et vérifié par le serveur. Sans code correct, aucun ajustement n'est possible. Le total ne descend jamais sous 0.
+                  </p>
+                </div>
+              )}
               <button onClick={saveCandidate} disabled={saving} style={{ marginTop: 4, padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: saving ? 0.6 : 1, fontFamily: "inherit" }}>
                 {saving ? "Enregistrement..." : isCreating ? "✓ Créer le candidat" : "✓ Enregistrer les modifications"}
               </button>
