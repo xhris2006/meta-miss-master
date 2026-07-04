@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/authStore";
 import { useT } from "@/store/langStore";
 import SwipeDeck, { SwipeCandidate } from "@/components/candidate/SwipeDeck";
+import { getDeviceId } from "@/lib/device";
 
 export default function CandidateDetailPage() {
   const t = useT();
@@ -85,10 +86,20 @@ export default function CandidateDetailPage() {
     return i >= 0 ? i + 1 : 1;
   };
 
-  // Double-tap gesture → add like (idempotent)
+  // Requêtes like/unlike en cours : bloque les clics rapides qui, avant,
+  // pouvaient envoyer plusieurs +1 au serveur avant la mise à jour de l'état.
+  const pendingLikeRef = useRef<Set<string>>(new Set());
+  // Miroir synchrone de likedSet : évite les doubles envois dus aux
+  // fermetures (closures) obsolètes pendant un re-render.
+  const likedRef = useRef<Set<string>>(new Set());
+  useEffect(() => { likedRef.current = likedSet; }, [likedSet]);
+
+  // Double-tap gesture → add like (idempotent, 1 like max par appareil)
   const likeCandidate = useCallback(
     async (cid: string) => {
-      if (likedSet.has(cid)) return;
+      if (likedRef.current.has(cid) || pendingLikeRef.current.has(cid)) return;
+      pendingLikeRef.current.add(cid);
+      likedRef.current.add(cid);
       setLikedSet((prev) => {
         const s = new Set(prev);
         s.add(cid);
@@ -97,7 +108,7 @@ export default function CandidateDetailPage() {
       });
       setList((prev) => prev.map((c) => (c.id === cid ? { ...c, totalLikes: (c.totalLikes || 0) + 1 } : c)));
       try {
-        const res = await api.post(`/candidates/${cid}/like`);
+        const res = await api.post(`/candidates/${cid}/like`, { deviceId: getDeviceId() });
         const total = res.data?.data?.totalLikes;
         if (typeof total === "number") {
           setList((prev) => prev.map((c) => (c.id === cid ? { ...c, totalLikes: total } : c)));
@@ -105,25 +116,32 @@ export default function CandidateDetailPage() {
         toast.success("Ajouté aux favoris ❤️");
       } catch {
         // revert on failure
+        likedRef.current.delete(cid);
         setLikedSet((prev) => {
           const s = new Set(prev);
           s.delete(cid);
           localStorage.setItem(likesKey, JSON.stringify(Array.from(s)));
           return s;
         });
+        setList((prev) => prev.map((c) => (c.id === cid ? { ...c, totalLikes: Math.max(0, (c.totalLikes || 0) - 1) } : c)));
+      } finally {
+        pendingLikeRef.current.delete(cid);
       }
     },
-    [likedSet, likesKey],
+    [likesKey],
   );
 
   // Heart button → toggle: add if not liked, remove if already liked
   const toggleLikeCandidate = useCallback(
     async (cid: string) => {
-      if (!likedSet.has(cid)) {
+      if (pendingLikeRef.current.has(cid)) return;
+      if (!likedRef.current.has(cid)) {
         likeCandidate(cid);
         return;
       }
+      pendingLikeRef.current.add(cid);
       // Optimistically remove the like
+      likedRef.current.delete(cid);
       setLikedSet((prev) => {
         const s = new Set(prev);
         s.delete(cid);
@@ -132,7 +150,7 @@ export default function CandidateDetailPage() {
       });
       setList((prev) => prev.map((c) => (c.id === cid ? { ...c, totalLikes: Math.max(0, (c.totalLikes || 0) - 1) } : c)));
       try {
-        const res = await api.delete(`/candidates/${cid}/like`);
+        const res = await api.delete(`/candidates/${cid}/like`, { data: { deviceId: getDeviceId() } });
         const total = res.data?.data?.totalLikes;
         if (typeof total === "number") {
           setList((prev) => prev.map((c) => (c.id === cid ? { ...c, totalLikes: total } : c)));
@@ -140,15 +158,19 @@ export default function CandidateDetailPage() {
         toast("Retiré des favoris");
       } catch {
         // revert on failure
+        likedRef.current.add(cid);
         setLikedSet((prev) => {
           const s = new Set(prev);
           s.add(cid);
           localStorage.setItem(likesKey, JSON.stringify(Array.from(s)));
           return s;
         });
+        setList((prev) => prev.map((c) => (c.id === cid ? { ...c, totalLikes: (c.totalLikes || 0) + 1 } : c)));
+      } finally {
+        pendingLikeRef.current.delete(cid);
       }
     },
-    [likedSet, likesKey, likeCandidate],
+    [likesKey, likeCandidate],
   );
 
   if (loading) {
