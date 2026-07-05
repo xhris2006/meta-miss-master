@@ -239,7 +239,17 @@ export default function AdminPage() {
       toast.success(res.data?.message || "Transactions synchronisées ✓", { duration: 6000 });
       if (s && s.credited > 0) load(); // rafraîchit stats + paiements si des votes ont été crédités
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Erreur lors de la synchronisation");
+      // Message précis pour diagnostiquer : code HTTP + cause probable.
+      const status = err?.response?.status;
+      const apiMsg = err?.response?.data?.message;
+      let msg: string;
+      if (apiMsg) msg = apiMsg;
+      else if (status === 404) msg = "Route absente (404) — backend non déployé/redémarré";
+      else if (status === 401 || status === 403) msg = "Non autorisé — reconnecte-toi en admin";
+      else if (status === 500) msg = "Erreur serveur (500) — voir les logs du backend";
+      else if (!err?.response) msg = "Serveur injoignable (réseau/CORS)";
+      else msg = `Erreur ${status || ""} lors de la synchronisation`;
+      toast.error(msg, { duration: 7000 });
     }
     setReconciling(false);
   };
