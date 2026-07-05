@@ -716,11 +716,20 @@ export default function RankingPage() {
                     <div className="rk-cname">{c.name}</div>
                     <div className="rk-ccity">{c.city || "—"}</div>
                     <div className="rk-cbar"><div className="rk-cbar-fill" style={{ width: `${percent}%` }} /></div>
+                    {/* TEMPORAIRE : % désormais affiché à droite (rk-cvotes) → on masque
+                        ce doublon. Pour revenir en arrière, décommenter cette ligne.
                     <div className="rk-cpct">{percent}%</div>
+                    */}
                   </Link>
                   <div className="rk-cvotes">
+                    {/* TEMPORAIRE : nombre de votes par candidate masqué, on affiche
+                        le pourcentage à la place. Pour réafficher le CHIFFRE :
+                        décommenter le bloc ci-dessous et supprimer le bloc pourcentage.
                     <div className="rk-cvotes-n">{vDisplay}</div>
                     <div className="rk-cvotes-l">votes</div>
+                    */}
+                    <div className="rk-cvotes-n">{percent}%</div>
+                    <div className="rk-cvotes-l">des votes</div>
                   </div>
                 </div>
                 <div className="rk-cactions">
