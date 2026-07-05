@@ -234,16 +234,20 @@ export default function AdminPage() {
   const reconcilePayments = async () => {
     setReconciling(true);
     try {
-      const res = await api.post("/admin/payments/reconcile", {});
+      // Opération par lots (vérifie chaque paiement auprès du fournisseur) :
+      // on laisse jusqu'à 2 min, bien au-delà du timeout global de 15 s.
+      const res = await api.post("/admin/payments/reconcile", {}, { timeout: 120000 });
       const s = res.data?.data;
       toast.success(res.data?.message || "Transactions synchronisées ✓", { duration: 6000 });
       if (s && s.credited > 0) load(); // rafraîchit stats + paiements si des votes ont été crédités
     } catch (err: any) {
-      // Message précis pour diagnostiquer : code HTTP + cause probable.
+      // Message précis : code HTTP / timeout / cause probable.
       const status = err?.response?.status;
       const apiMsg = err?.response?.data?.message;
+      const isTimeout = err?.code === "ECONNABORTED" || /timeout/i.test(err?.message || "");
       let msg: string;
       if (apiMsg) msg = apiMsg;
+      else if (isTimeout) msg = "Vérification trop longue — relance (elle traite les paiements par lots)";
       else if (status === 404) msg = "Route absente (404) — backend non déployé/redémarré";
       else if (status === 401 || status === 403) msg = "Non autorisé — reconnecte-toi en admin";
       else if (status === 500) msg = "Erreur serveur (500) — voir les logs du backend";
