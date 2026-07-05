@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import toast from "react-hot-toast";
 import LangSelector from "@/components/ui/LangSelector";
 import { useT } from "@/store/langStore";
+import { safeRedirectPath, openExternal } from "@/lib/safeUrl";
 
 type Props = {
   initialTab: "login" | "register";
@@ -21,13 +22,22 @@ export default function LoginClient({ initialTab, redirect, oauthToken, oauthRef
   const setTokens = useAuthStore((state) => state.setTokens);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
+  // La cible de redirection est toujours normalisée en chemin interne :
+  // impossible d'être renvoyé vers un domaine externe (anti open-redirect).
+  const safeRedirect = safeRedirectPath(redirect);
+
   useEffect(() => {
     if (oauthToken && oauthRefreshToken && !isAuthenticated) {
+      // Retire immédiatement les jetons de l'URL (barre d'adresse, historique,
+      // referrer) : ils ne doivent jamais y persister après consommation.
+      if (typeof window !== "undefined" && window.location.search) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
       setTokens(oauthToken, oauthRefreshToken);
       api.get("/auth/me")
         .then((response) => {
           setAuth(response.data.data, oauthToken, oauthRefreshToken);
-          setRedirectAfterPopup(redirect);
+          setRedirectAfterPopup(safeRedirect);
           setShowWhatsAppPopup(true);
         })
         .catch(() => { toast.error("Connexion Google échouée"); });
@@ -37,7 +47,7 @@ export default function LoginClient({ initialTab, redirect, oauthToken, oauthRef
   const [tab, setTab] = useState<"login" | "register">(initialTab);
   const [loading, setLoading] = useState(false);
   const [showWhatsAppPopup, setShowWhatsAppPopup] = useState(false);
-  const [redirectAfterPopup, setRedirectAfterPopup] = useState(redirect);
+  const [redirectAfterPopup, setRedirectAfterPopup] = useState(safeRedirect);
   const [credentials, setCredentials] = useState({ email: "", password: "", name: "", phone: "" });
 
   useEffect(() => { setTab(initialTab); }, [initialTab]);
@@ -55,7 +65,7 @@ export default function LoginClient({ initialTab, redirect, oauthToken, oauthRef
         password: credentials.password,
       });
       setAuth(data.data.user, data.data.accessToken, data.data.refreshToken);
-      setRedirectAfterPopup(redirect);
+      setRedirectAfterPopup(safeRedirect);
       setShowWhatsAppPopup(true);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Erreur de connexion");
@@ -75,7 +85,7 @@ export default function LoginClient({ initialTab, redirect, oauthToken, oauthRef
         phone: credentials.phone,
       });
       setAuth(data.data.user, data.data.accessToken, data.data.refreshToken);
-      setRedirectAfterPopup(redirect);
+      setRedirectAfterPopup(safeRedirect);
       setShowWhatsAppPopup(true);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Erreur d'inscription");
@@ -303,7 +313,7 @@ export default function LoginClient({ initialTab, redirect, oauthToken, oauthRef
             </p>
             <button
               type="button"
-              onClick={() => window.open("https://chat.whatsapp.com/HuksAebrAfVBEt292xU4KF?mode=gi_t", "_blank")}
+              onClick={() => openExternal("https://chat.whatsapp.com/HuksAebrAfVBEt292xU4KF?mode=gi_t")}
               className="btn-blue"
               style={{ width: "100%", marginBottom: 10 }}
             >
@@ -311,7 +321,7 @@ export default function LoginClient({ initialTab, redirect, oauthToken, oauthRef
             </button>
             <button
               type="button"
-              onClick={() => { setShowWhatsAppPopup(false); router.push(redirectAfterPopup); }}
+              onClick={() => { setShowWhatsAppPopup(false); router.push(safeRedirectPath(redirectAfterPopup)); }}
               className="btn-outline"
               style={{ width: "100%" }}
             >

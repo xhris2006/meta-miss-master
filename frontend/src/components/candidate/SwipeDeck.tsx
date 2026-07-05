@@ -487,7 +487,8 @@ function DeckCard({
 function Socials({ c, isLiked, onLike }: { c: SwipeCandidate; isLiked: boolean; onLike: () => void }) {
   const open = (url: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.open(url, "_blank");
+    // noopener,noreferrer : la page ouverte ne peut pas piloter notre onglet
+    window.open(url, "_blank", "noopener,noreferrer");
   };
   return (
     <div className="swipe-socials">

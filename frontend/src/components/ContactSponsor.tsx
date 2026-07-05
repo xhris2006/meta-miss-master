@@ -11,7 +11,7 @@ export default function ContactSponsor() {
   const t = useT();
 
   const openWhatsApp = (message: string) => {
-    window.open(`https://wa.me/${DEV_WHATSAPP}?text=${encodeURIComponent(message)}`, "_blank");
+    window.open(`https://wa.me/${DEV_WHATSAPP}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
   };
 
   return (
