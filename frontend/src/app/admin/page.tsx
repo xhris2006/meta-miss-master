@@ -226,7 +226,23 @@ export default function AdminPage() {
   const sc = (s: string) => statusColor[s] || "#64748B";
 
   const [exportingTx, setExportingTx] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
   const candidateNameById: Record<string, string> = Object.fromEntries(candidates.map((c: any) => [c.id, c.name]));
+
+  // Re-vérifie auprès des fournisseurs les paiements en attente et crédite les
+  // votes des transactions confirmées mais non créditées (webhook manqué).
+  const reconcilePayments = async () => {
+    setReconciling(true);
+    try {
+      const res = await api.post("/admin/payments/reconcile", {});
+      const s = res.data?.data;
+      toast.success(res.data?.message || "Transactions synchronisées ✓", { duration: 6000 });
+      if (s && s.credited > 0) load(); // rafraîchit stats + paiements si des votes ont été crédités
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Erreur lors de la synchronisation");
+    }
+    setReconciling(false);
+  };
 
   const handleCandidatePdf = async (c: any) => {
     try { await downloadCandidatePdf(c, apiBase); toast.success("PDF généré ✓"); }
@@ -504,9 +520,15 @@ export default function AdminPage() {
                   <strong style={{ color: "#10B981" }}>{payments.filter(p => p.status === "COMPLETED").length}</strong> complétée(s) ·{" "}
                   Revenus : <strong style={{ color: "#0F172A" }}>{payments.filter(p => p.status === "COMPLETED").reduce((s, p) => s + (p.amount || 0), 0).toLocaleString("fr-FR")} FCFA</strong>
                 </div>
-                <button onClick={handleTransactionsPdf} disabled={exportingTx} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px #2563EB30", opacity: exportingTx ? 0.6 : 1, fontFamily: "inherit" }}>
-                  <FileDown size={16} /> {exportingTx ? "Génération..." : "Télécharger PDF (toutes)"}
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <button onClick={reconcilePayments} disabled={reconciling} title="Re-vérifie les paiements en attente auprès des fournisseurs et crédite les votes confirmés mais manquants" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 14, background: reconciling ? "#94A3B8" : "#10B981", color: "#fff", border: "none", cursor: reconciling ? "wait" : "pointer", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px rgba(16,185,129,0.25)", fontFamily: "inherit" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={reconciling ? { animation: "spin 1s linear infinite" } : undefined}><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" /></svg>
+                    {reconciling ? "Vérification..." : "Re-vérifier les transactions"}
+                  </button>
+                  <button onClick={handleTransactionsPdf} disabled={exportingTx} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px #2563EB30", opacity: exportingTx ? 0.6 : 1, fontFamily: "inherit" }}>
+                    <FileDown size={16} /> {exportingTx ? "Génération..." : "Télécharger PDF (toutes)"}
+                  </button>
+                </div>
               </div>
 
               {payments.length === 0 ? (
