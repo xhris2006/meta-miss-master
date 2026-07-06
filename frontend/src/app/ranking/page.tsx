@@ -906,7 +906,15 @@ export default function RankingPage() {
                       </svg>
                       {v.candidateName}
                     </span>
-                    <span className="tv-type-badge-miss">Miss</span>
+                    <span
+                      className={
+                        v.candidateType === "MASTER"
+                          ? "tv-type-badge-master"
+                          : "tv-type-badge-miss"
+                      }
+                    >
+                      {v.candidateType === "MASTER" ? "Master" : "Miss"}
+                    </span>
                   </div>
                 </div>
 
