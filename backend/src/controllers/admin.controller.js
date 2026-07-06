@@ -2,6 +2,8 @@ const prisma = require("../utils/prismaClient");
 const adminService = require("../services/admin.service");
 const candidateService = require("../services/candidate.service");
 const contestService = require("../services/contest.service");
+const settingsService = require("../services/settings.service");
+const pointsService = require("../services/points.service");
 
 class AdminController {
   // ── Candidates ──────────────────────────────────────────
@@ -71,6 +73,20 @@ class AdminController {
     } catch (err) { next(err); }
   }
 
+  // Ajuster manuellement les votes d'un candidat approuvé (code de validation requis)
+  async adjustCandidateVotes(req, res, next) {
+    try {
+      const { delta, code } = req.body;
+      const candidate = await adminService.adjustCandidateVotes(req.params.id, { delta, code });
+      const d = +delta;
+      res.json({
+        success: true,
+        message: `Votes ajustés (${d > 0 ? "+" : ""}${d}) — nouveau total : ${candidate.totalVotes}`,
+        data: candidate,
+      });
+    } catch (err) { next(err); }
+  }
+
   async deleteCandidate(req, res, next) {
     try {
       await adminService.deleteCandidate(req.params.id);
@@ -92,6 +108,26 @@ class AdminController {
     try {
       const result = await adminService.refundPayment(req.params.id);
       res.json({ success: true, message: "Remboursement initié", data: result });
+    } catch (err) { next(err); }
+  }
+
+  // Re-vérifie tous les paiements en attente auprès des fournisseurs et crédite
+  // les votes des transactions confirmées mais non créditées (webhook manqué).
+  async reconcilePayments(req, res, next) {
+    try {
+      const { withinDays } = req.body || {};
+      const summary = await adminService.reconcilePendingPayments({ withinDays });
+      const parts = [];
+      if (summary.credited > 0) {
+        parts.push(`${summary.credited} transaction(s) synchronisée(s) · ${summary.votesAdded} vote(s) crédité(s)`);
+      } else {
+        parts.push(`Aucune transaction à créditer (${summary.checked} vérifiée(s))`);
+      }
+      // S'il reste des paiements en attente non traités dans ce lot, inviter à relancer.
+      if (summary.remaining > 0) {
+        parts.push(`${summary.remaining} encore en attente — relancez pour continuer`);
+      }
+      res.json({ success: true, message: parts.join(" · "), data: summary });
     } catch (err) { next(err); }
   }
 
@@ -154,7 +190,7 @@ class AdminController {
 
   async deleteUser(req, res, next) {
     try {
-      
+
       const id = req.params.id; // CUID string
       if (req.user.id === id) return res.status(400).json({ success: false, message: "Vous ne pouvez pas vous supprimer vous-même." });
       await prisma.user.delete({ where: { id } });
@@ -164,7 +200,7 @@ class AdminController {
 
   async updateUser(req, res, next) {
     try {
-      
+
       const id = req.params.id; // CUID string
       const { name, email, role } = req.body;
       const user = await prisma.user.update({
@@ -181,6 +217,82 @@ class AdminController {
     try {
       await adminService.deleteVote(req.params.id);
       res.json({ success: true, message: "Vote supprimé (fraude)" });
+    } catch (err) { next(err); }
+  }
+
+  // ── Réseaux sociaux du site ──────────────────────────────
+  async getSocialLinks(req, res, next) {
+    try {
+      const data = await settingsService.getSocialLinks();
+      res.json({ success: true, data });
+    } catch (err) { next(err); }
+  }
+
+  async updateSocialLinks(req, res, next) {
+    try {
+      const data = await settingsService.updateSocialLinks(req.body || {});
+      res.json({ success: true, message: "Réseaux sociaux mis à jour", data });
+    } catch (err) { next(err); }
+  }
+
+  // ── Votes doubles (promo) ────────────────────────────────
+  async getDoubleVotes(req, res, next) {
+    try {
+      const enabled = await settingsService.getDoubleVotes();
+      res.json({ success: true, data: { enabled } });
+    } catch (err) { next(err); }
+  }
+
+  async setDoubleVotes(req, res, next) {
+    try {
+      const enabled = req.body?.enabled === true || req.body?.enabled === "true";
+      const data = await settingsService.setDoubleVotes(enabled);
+      res.json({
+        success: true,
+        message: `Votes doubles ${data.enabled ? "activés" : "désactivés"}`,
+        data,
+      });
+    } catch (err) { next(err); }
+  }
+
+  // ── Reset all votes ──────────────────────────────────────
+  async resetVotes(req, res, next) {
+    try {
+      // Garde-fou : l'action est destructive, on exige une confirmation explicite.
+      if (req.body?.confirm !== true) {
+        return res.status(400).json({ success: false, message: "Confirmation requise (confirm: true)" });
+      }
+      const result = await adminService.resetAllVotes();
+      res.json({
+        success: true,
+        message: `Tous les votes ont été remis à zéro (${result.deletedVotes} vote(s) supprimé(s))`,
+        data: result,
+      });
+    } catch (err) { next(err); }
+  }
+
+  // ── Points quotidiens ────────────────────────────────────
+  // Attribution manuelle (filet de secours si le cron de 21h a échoué).
+  // Idempotent par jour ; force:true ré-attribue même si déjà fait aujourd'hui.
+  async awardPoints(req, res, next) {
+    try {
+      const force = req.body?.force === true;
+      const result = await pointsService.awardDailyPoints({ force });
+      res.json({
+        success: true,
+        message: result.alreadyAwarded
+          ? `Points déjà attribués aujourd'hui (${result.day})`
+          : `Points attribués à ${result.awarded.length} candidat(s) · votes remis à zéro`,
+        data: result,
+      });
+    } catch (err) { next(err); }
+  }
+
+  // Dernière attribution (pour affichage admin).
+  async getPointsStatus(req, res, next) {
+    try {
+      const last = await pointsService.getLastAward();
+      res.json({ success: true, data: { last, today: pointsService.cameroonDayKey() } });
     } catch (err) { next(err); }
   }
 }

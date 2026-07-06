@@ -36,15 +36,15 @@ async function emitRankingUpdate() {
     const [miss, master] = await Promise.all([
       prisma.candidate.findMany({
         where: { status: "APPROVED", type: "MISS" },
-        orderBy: { totalVotes: "desc" },
+        orderBy: [{ totalVotes: "desc" }, { points: "desc" }],
         take: 10,
-        select: { id: true, name: true, photoUrl: true, city: true, totalVotes: true }
+        select: { id: true, name: true, photoUrl: true, city: true, totalVotes: true, points: true }
       }),
       prisma.candidate.findMany({
         where: { status: "APPROVED", type: "MASTER" },
-        orderBy: { totalVotes: "desc" },
+        orderBy: [{ totalVotes: "desc" }, { points: "desc" }],
         take: 10,
-        select: { id: true, name: true, photoUrl: true, city: true, totalVotes: true }
+        select: { id: true, name: true, photoUrl: true, city: true, totalVotes: true, points: true }
       })
     ]);
 

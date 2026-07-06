@@ -63,6 +63,7 @@ model Candidate {
   status      CandidateStatus @default(PENDING)
   totalVotes  Int             @default(0)
   totalLikes  Int             @default(0)
+  points      Int             @default(0)
   instagram   String?
   tiktok      String?
   snap        String?
@@ -74,6 +75,33 @@ model Candidate {
 
   user        User?           @relation(fields: [userId], references: [id])
   votes       Vote[]
+  likes       CandidateLike[]
+}
+
+// Un like = un appareil (deviceId) pour un candidat.
+// La contrainte unique (candidateId, deviceId) rend le like idempotent :
+// impossible de compter deux fois le même appareil, même en spammant l'API.
+model CandidateLike {
+  id          String   @id @default(cuid())
+  candidateId String
+  deviceId    String
+  createdAt   DateTime @default(now())
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, deviceId])
+  @@index([candidateId])
+}
+
+// Trace de l'attribution quotidienne des points (chaque soir à 21h Cameroun).
+// `day` = "YYYY-MM-DD" (jour local Cameroun), unique → garantit qu'on n'attribue
+// les points qu'UNE fois par jour, même si le serveur redémarre ou si l'admin
+// déclenche manuellement en plus du cron. `detail` = instantané du classement.
+model PointsAward {
+  id        String   @id @default(cuid())
+  day       String   @unique
+  detail    Json?
+  createdAt DateTime @default(now())
 }
 
 model Vote {
@@ -131,4 +159,11 @@ model SystemLog {
   message   String
   meta      Json?
   createdAt DateTime @default(now())
+}
+
+// Réglages du site (singleton) : liens réseaux sociaux affichés sur la page Support.
+model SiteSetting {
+  id        String   @id @default("site-settings")
+  data      Json?
+  updatedAt DateTime @updatedAt
 }

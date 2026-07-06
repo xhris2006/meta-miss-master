@@ -70,6 +70,15 @@ const candidacyRateLimiter = rateLimit({
   message: { success: false, message: "Vous avez déjà soumis plusieurs candidatures. Réessayez plus tard." },
 });
 
+// ── Likes : 60 req / min par IP (anti-spam des compteurs de likes) ──────────
+const likeRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Trop d'actions. Ralentissez." },
+});
+
 module.exports = {
   globalRateLimiter,
   authRateLimiter,
@@ -77,4 +86,5 @@ module.exports = {
   paymentRateLimiter,
   rankingRateLimiter,
   candidacyRateLimiter,
+  likeRateLimiter,
 };

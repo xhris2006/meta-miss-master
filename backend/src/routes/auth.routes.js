@@ -36,7 +36,10 @@ router.get(
   authController.googleCallback
 );
 
-router.post("/login", authRateLimiter, adminLoginValidation, authController.login);
+// SÉCURITÉ : les deux routes mènent au login admin → même limiteur STRICT (5/15min)
+// pour éviter qu'un attaquant utilise /login (anciennement plus permissif) pour
+// contourner la limite de /admin/login.
+router.post("/login", adminAuthRateLimiter, adminLoginValidation, authController.login);
 router.post("/admin/login", adminAuthRateLimiter, adminLoginValidation, authController.login);
 router.post("/user/register", authRateLimiter, userRegisterValidation, authController.registerUser);
 router.post("/user/login", authRateLimiter, userLoginValidation, authController.loginUser);

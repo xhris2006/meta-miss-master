@@ -1,10 +1,22 @@
 const prisma = require("../utils/prismaClient");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { AppError } = require("../utils/errors");
 
 const ACCESS_EXPIRY = "2h";
 const REFRESH_EXPIRY = "7d";
+
+// Comparaison de chaînes en temps constant (anti timing-attack).
+function safeEqual(a, b) {
+  const ab = Buffer.from(String(a ?? ""), "utf8");
+  const bb = Buffer.from(String(b ?? ""), "utf8");
+  if (ab.length !== bb.length) {
+    crypto.timingSafeEqual(ab, ab); // garde un coût constant
+    return false;
+  }
+  return crypto.timingSafeEqual(ab, bb);
+}
 
 function generateTokens(payload) {
   const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
@@ -59,9 +71,9 @@ async function loginAdmin({ email, password, propertyNumber, motherFullName, ip 
   }
 
   // ── Vérifications timing-safe ───────────────────────────────────────────────
-  const emailOk  = email.toLowerCase().trim() === config.email;
-  const propOk   = propertyNumber.trim() === config.propertyNumber;
-  const motherOk = motherFullName.toLowerCase().trim() === config.motherFullName;
+  const emailOk  = safeEqual(email.toLowerCase().trim(), config.email);
+  const propOk   = safeEqual(propertyNumber.trim(), config.propertyNumber);
+  const motherOk = safeEqual(motherFullName.toLowerCase().trim(), config.motherFullName);
 
   // Préférer le hash bcrypt ; fallback comparaison brute si ADMIN_PASSWORD_HASH non défini (dev)
   let pwOk = false;
@@ -126,7 +138,14 @@ async function registerUser({ name, email, password, phone }) {
 async function loginUser({ email, password }) {
   const normalizedEmail = email.toLowerCase().trim();
   const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+  if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
+    throw new AppError("Email ou mot de passe invalide", 401);
+  }
+
+  // SÉCURITÉ : un compte ADMIN ne peut JAMAIS se connecter via le login
+  // utilisateur (cela contournerait la double-authentification admin). Message
+  // générique pour ne pas révéler qu'il s'agit d'un compte admin.
+  if (user.role === "ADMIN") {
     throw new AppError("Email ou mot de passe invalide", 401);
   }
 
@@ -145,6 +164,12 @@ async function loginUser({ email, password }) {
 async function loginOrRegisterGoogle({ email, name }) {
   const normalizedEmail = email.toLowerCase().trim();
   let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+  // SÉCURITÉ : un compte ADMIN ne peut pas obtenir de session admin via Google
+  // SSO (les admins passent par /auth/admin/login avec les facteurs dédiés).
+  if (user && user.role === "ADMIN") {
+    throw new AppError("Connexion non autorisée pour ce compte", 403);
+  }
 
   if (!user) {
     const passwordHash = await bcrypt.hash(`${normalizedEmail}-${Date.now()}`, 10);
@@ -205,7 +230,9 @@ async function getMe(userPayload) {
 
 async function refresh(refreshToken) {
   try {
-    const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, {
+      algorithms: ["HS256"],
+    });
 
     if (payload.role === "ADMIN" && payload.id === "env-admin") {
       const user = buildAdminUser();

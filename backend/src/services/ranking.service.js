@@ -16,8 +16,10 @@ async function getGlobalRanking(type) {
 
   const candidates = await prisma.candidate.findMany({
     where,
-    orderBy: { totalVotes: "desc" },
-    select: { id: true, name: true, type: true, city: true, photoUrl: true, totalVotes: true }
+    // Tri par votes ; départage par points cumulés (utile juste après la remise
+    // à zéro des votes de 21h, où tous les votes valent 0).
+    orderBy: [{ totalVotes: "desc" }, { points: "desc" }],
+    select: { id: true, name: true, type: true, city: true, photoUrl: true, totalVotes: true, points: true }
   });
 
   const result = candidates.map((c, i) => ({ ...c, rank: i + 1 }));
@@ -35,9 +37,9 @@ async function getTopN(n, type) {
 
   const candidates = await prisma.candidate.findMany({
     where,
-    orderBy: { totalVotes: "desc" },
+    orderBy: [{ totalVotes: "desc" }, { points: "desc" }],
     take: n,
-    select: { id: true, name: true, type: true, city: true, photoUrl: true, totalVotes: true }
+    select: { id: true, name: true, type: true, city: true, photoUrl: true, totalVotes: true, points: true }
   });
 
   const result = candidates.map((c, i) => ({ ...c, rank: i + 1 }));
@@ -45,32 +47,23 @@ async function getTopN(n, type) {
   return result;
 }
 
+// SÉCURITÉ : stats PUBLIQUES uniquement. On n'expose JAMAIS le chiffre
+// d'affaires, le nombre de transactions ni le détail des votes récents ici
+// (route /api/ranking/stats sans auth). Les stats sensibles restent dans
+// l'espace admin (adminService.getDashboardStats, protégé par requireAdmin).
 async function getStats() {
-  const key = "stats:admin";
+  const key = "stats:public";
   const cached = cache.get(key);
   if (cached) return cached;
 
-  const [totalCandidates, totalVotes, totalPayments, recentVotes] = await Promise.all([
+  const [totalCandidates, totalVotes] = await Promise.all([
     prisma.candidate.count({ where: { status: "APPROVED" } }),
     prisma.vote.aggregate({ _sum: { count: true } }),
-    prisma.payment.aggregate({
-      where: { status: "COMPLETED" },
-      _sum: { amount: true },
-      _count: true
-    }),
-    prisma.vote.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      include: { candidate: { select: { name: true, type: true } } }
-    })
   ]);
 
   const result = {
     totalCandidates,
     totalVotesCount: totalVotes._sum.count || 0,
-    totalRevenue: totalPayments._sum.amount || 0,
-    totalTransactions: totalPayments._count,
-    recentVotes
   };
 
   cache.set(key, result, STATS_TTL);

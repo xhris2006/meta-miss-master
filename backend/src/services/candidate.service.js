@@ -4,6 +4,27 @@ const { AppError } = require("../utils/errors");
 const prisma = new PrismaClient();
 const VALID_TYPES = ["MISS", "MASTER"];
 
+// SÉCURITÉ : champs exposés publiquement. On EXCLUT `phone` (numéro privé de la
+// candidate) et `userId` des réponses publiques pour éviter toute fuite de PII.
+const PUBLIC_CANDIDATE_SELECT = {
+  id: true,
+  name: true,
+  type: true,
+  age: true,
+  city: true,
+  bio: true,
+  photoUrl: true,
+  status: true,
+  totalVotes: true,
+  totalLikes: true,
+  points: true,
+  instagram: true,
+  tiktok: true,
+  snap: true,
+  whatsappFan: true,
+  createdAt: true,
+};
+
 function normalizePagination(page, limit, defaultPage = 1, defaultLimit = 20) {
   const normalizedPage = Number.isInteger(+page) && +page > 0 ? +page : defaultPage;
   const normalizedLimit = Number.isInteger(+limit) && +limit > 0 ? +limit : defaultLimit;
@@ -54,7 +75,8 @@ async function getAllApproved({ type, page, limit }) {
       where,
       orderBy: { totalVotes: "desc" },
       skip,
-      take: safeLimit
+      take: safeLimit,
+      select: PUBLIC_CANDIDATE_SELECT,
     }),
     prisma.candidate.count({ where })
   ]);
@@ -65,7 +87,8 @@ async function getAllApproved({ type, page, limit }) {
 async function getById(id) {
   const candidate = await prisma.candidate.findFirst({
     where: { id, status: "APPROVED" },
-    include: {
+    select: {
+      ...PUBLIC_CANDIDATE_SELECT,
       votes: {
         orderBy: { createdAt: "desc" },
         take: 5,
@@ -86,7 +109,8 @@ async function getTop({ type, limit }) {
   return prisma.candidate.findMany({
     where,
     orderBy: { totalVotes: "desc" },
-    take: safeLimit
+    take: safeLimit,
+    select: PUBLIC_CANDIDATE_SELECT,
   });
 }
 

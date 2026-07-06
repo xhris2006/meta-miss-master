@@ -8,7 +8,8 @@ function authenticate(req, res, next) {
   }
   const token = header.split(" ")[1];
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    // SÉCURITÉ : algorithme épinglé (HS256) pour éviter toute confusion d'algo.
+    const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
     req.user = payload;
     next();
   } catch {
