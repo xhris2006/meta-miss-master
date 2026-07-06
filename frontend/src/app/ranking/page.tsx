@@ -13,6 +13,7 @@ interface RC {
   city: string;
   photoUrl: string;
   totalVotes: number;
+  points?: number;
   rank: number;
 }
 
@@ -636,6 +637,10 @@ export default function RankingPage() {
           .rk-ccard.top .rk-cvotes-n { color: #fff; }
           .rk-cvotes-l { font-size: 0.62rem; color: var(--text-muted); }
           .rk-ccard.top .rk-cvotes-l { color: rgba(255,255,255,0.7); }
+          /* Badge points (éliminations par points) */
+          .rk-cpoints { display: inline-flex; align-items: center; gap: 4px; margin: 2px 0 6px; padding: 2px 9px; border-radius: 100px; background: linear-gradient(135deg,#B45309,#F59E0B); color: #fff; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.01em; box-shadow: 0 2px 6px rgba(245,158,11,0.35); }
+          .rk-cpoints svg { display: block; }
+          .rk-ccard.top .rk-cpoints { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); }
           .rk-cactions { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
           .rk-vote-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 11px; border-radius: 12px; background: var(--blue); color: #fff; font-size: 0.82rem; font-weight: 800; text-decoration: none; transition: background 0.15s; }
           .rk-vote-btn:hover { background: var(--blue-hover); }
@@ -714,8 +719,14 @@ export default function RankingPage() {
                   <img className="rk-cavatar" src={photo} alt={c.name} onError={(e: any) => { if (!e.target.src.endsWith("/placeholder-avatar.svg")) e.target.src = "/placeholder-avatar.svg"; }} />
                   <Link href={`/candidates/${c.id}`} className="rk-cmeta">
                     <div className="rk-cname">{c.name}</div>
-                    <div className="rk-ccity">{c.city || "—"}</div>
-                    <div className="rk-cbar"><div className="rk-cbar-fill" style={{ width: `${percent}%` }} /></div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span className="rk-cpoints" title="Points cumulés (éliminations par points)">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                        {(c.points ?? 0)} pts
+                      </span>
+                      <span className="rk-ccity" style={{ margin: 0 }}>{c.city || "—"}</span>
+                    </div>
+                    <div className="rk-cbar" style={{ marginTop: 6 }}><div className="rk-cbar-fill" style={{ width: `${percent}%` }} /></div>
                     <div className="rk-cpct">{percent}%</div>
                   </Link>
                   <div className="rk-cvotes">

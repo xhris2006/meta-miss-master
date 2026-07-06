@@ -227,6 +227,23 @@ export default function AdminPage() {
 
   const [exportingTx, setExportingTx] = useState(false);
   const [reconciling, setReconciling] = useState(false);
+  const [awardingPoints, setAwardingPoints] = useState(false);
+
+  // Attribution manuelle des points du jour (filet de secours si le cron de 21h
+  // a échoué). Idempotent côté serveur : un seul passage par jour.
+  const awardPoints = async () => {
+    if (!confirm("Attribuer les points du classement du jour (100 → 10 pour le top 10) et remettre les votes à zéro ?\n\nNormalement automatique à 21h. À ne lancer manuellement que si le cron a échoué.")) return;
+    setAwardingPoints(true);
+    try {
+      const res = await api.post("/admin/points/award", {}, { timeout: 60000 });
+      toast.success(res.data?.message || "Points attribués ✓", { duration: 6000 });
+      load();
+    } catch (err: any) {
+      const status = err?.response?.status;
+      toast.error(err?.response?.data?.message || (status === 404 ? "Route absente (404) — backend non déployé" : "Erreur lors de l'attribution des points"), { duration: 7000 });
+    }
+    setAwardingPoints(false);
+  };
   const candidateNameById: Record<string, string> = Object.fromEntries(candidates.map((c: any) => [c.id, c.name]));
 
   // Re-vérifie auprès des fournisseurs les paiements en attente et crédite les
@@ -412,6 +429,24 @@ export default function AdminPage() {
                 </button>
               </div>
 
+              {/* Points quotidiens (attribution auto à 21h, bouton = secours) */}
+              <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", borderColor: "#FDE68A", background: "#FFFBEB", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+                    ⭐ Points du jour
+                    <span style={{ ...S.pill("#F59E0B") }}>AUTO 21h</span>
+                  </div>
+                  <p style={{ color: "#92400E", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+                    Chaque soir à <strong>21h00 (Cameroun)</strong>, le top 10 du classement reçoit
+                    <strong> 100 → 10 points</strong> (écart de 10), puis les votes sont remis à zéro pour la manche suivante.
+                    Ce bouton n'est utile que si l'attribution automatique a échoué.
+                  </p>
+                </div>
+                <button onClick={awardPoints} disabled={awardingPoints} style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 14, background: awardingPoints ? "#FCD34D" : "#F59E0B", color: "#fff", border: "none", cursor: awardingPoints ? "wait" : "pointer", fontWeight: 800, fontSize: 14, boxShadow: "0 4px 16px rgba(245,158,11,0.3)", fontFamily: "inherit", flexShrink: 0 }}>
+                  <Trophy size={16} /> {awardingPoints ? "Attribution..." : "Attribuer maintenant"}
+                </button>
+              </div>
+
               <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", borderColor: "#FECACA", background: "#FFFCFC" }}>
                 <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4 }}>⚠️ Zone dangereuse</div>
                 <p style={{ color: "#94A3B8", fontSize: 13, margin: "0 0 16px", lineHeight: 1.5 }}>
@@ -507,8 +542,13 @@ export default function AdminPage() {
                         </div>
                         <div className="acand-name">{c.name}</div>
                         <div className="acand-sub">{c.city || "—"}{c.age ? ` · ${c.age} ans` : ""}</div>
-                        <div className="acand-votes">
-                          <Trophy size={13} color="#F59E0B" /> {(c.totalVotes ?? 0).toLocaleString("fr-FR")} votes
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 7, flexWrap: "wrap" }}>
+                          <span className="acand-votes" style={{ marginTop: 0 }}>
+                            <Trophy size={13} color="#F59E0B" /> {(c.totalVotes ?? 0).toLocaleString("fr-FR")} votes
+                          </span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.78rem", fontWeight: 800, color: "#B45309", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 100, padding: "1px 9px" }} title="Points cumulés">
+                            ⭐ {(c.points ?? 0)} pts
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -700,6 +740,7 @@ export default function AdminPage() {
               ["Âge", viewingCandidate.age ? viewingCandidate.age + " ans" : "—"],
               ["Ville", viewingCandidate.city],
               ["Votes", viewingCandidate.totalVotes],
+              ["Points", `⭐ ${viewingCandidate.points ?? 0}`],
               ["Bio", viewingCandidate.bio || "—"],
               ["Instagram", viewingCandidate.instagram || "—"],
               ["TikTok", viewingCandidate.tiktok || "—"],
