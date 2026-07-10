@@ -87,6 +87,20 @@ class AdminController {
     } catch (err) { next(err); }
   }
 
+  // Ajuster manuellement les points d'un candidat approuvé (code de validation requis)
+  async adjustCandidatePoints(req, res, next) {
+    try {
+      const { delta, code } = req.body;
+      const candidate = await adminService.adjustCandidatePoints(req.params.id, { delta, code });
+      const d = +delta;
+      res.json({
+        success: true,
+        message: `Points ajustés (${d > 0 ? "+" : ""}${d}) — nouveau total : ${candidate.points}`,
+        data: candidate,
+      });
+    } catch (err) { next(err); }
+  }
+
   async deleteCandidate(req, res, next) {
     try {
       await adminService.deleteCandidate(req.params.id);

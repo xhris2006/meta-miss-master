@@ -73,6 +73,11 @@ export default function AdminPage() {
   const [voteCode, setVoteCode] = useState("");
   const [voteAdjusting, setVoteAdjusting] = useState(false);
 
+  // Ajustement manuel des points (même code de validation que les votes)
+  const [pointQty, setPointQty] = useState("");
+  const [pointCode, setPointCode] = useState("");
+  const [pointAdjusting, setPointAdjusting] = useState(false);
+
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editUserValues, setEditUserValues] = useState({ name: "", email: "", role: "" });
   const [editUserSaving, setEditUserSaving] = useState(false);
@@ -166,6 +171,7 @@ export default function AdminPage() {
     setPhotoFile(null);
     setPhotoPreview(c.photoUrl?.startsWith("http") ? c.photoUrl : `${apiBase}${c.photoUrl}`);
     setVoteQty(""); setVoteCode("");
+    setPointQty(""); setPointCode("");
   };
 
   // Ajout/retrait manuel de votes — exige le code de validation (vérifié côté serveur)
@@ -191,6 +197,30 @@ export default function AdminPage() {
     }
     setVoteAdjusting(false);
   };
+  // Ajout/retrait manuel de points — exige le même code de validation (vérifié côté serveur)
+  const adjustPoints = async (sign: 1 | -1) => {
+    const qty = parseInt(pointQty, 10);
+    if (!Number.isInteger(qty) || qty <= 0) { toast.error("Entrez un nombre de points valide"); return; }
+    if (!pointCode.trim()) { toast.error("Code de validation requis"); return; }
+    setPointAdjusting(true);
+    try {
+      const res = await api.patch(`/admin/candidates/${editingCandidate.id}/points`, {
+        delta: sign * qty,
+        code: pointCode.trim(),
+      });
+      const updated = res.data?.data;
+      toast.success(res.data?.message || "Points ajustés ✓");
+      if (updated && typeof updated.points === "number") {
+        setEditingCandidate({ ...editingCandidate, points: updated.points });
+        setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? { ...c, points: updated.points } : c));
+      }
+      setPointQty("");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Erreur — code invalide ou serveur indisponible");
+    }
+    setPointAdjusting(false);
+  };
+
   const openCreate = () => { setIsCreating(true); setEditingCandidate({}); setEditValues({ ...EMPTY_EDIT }); setPhotoFile(null); setPhotoPreview(null); };
 
   const saveCandidate = async () => {
@@ -869,6 +899,51 @@ export default function AdminPage() {
                   </div>
                   <p style={{ margin: 0, fontSize: 11.5, color: "#92400E", lineHeight: 1.5 }}>
                     Le code de validation est obligatoire et vérifié par le serveur. Sans code correct, aucun ajustement n'est possible. Le total ne descend jamais sous 0.
+                  </p>
+                </div>
+              )}
+
+              {/* ── Ajustement manuel des points (candidat approuvé, code requis) ── */}
+              {!isCreating && editingCandidate.status === "APPROVED" && (
+                <div style={{ padding: 14, borderRadius: 14, background: "#F5F3FF", border: "1.5px solid #DDD6FE", display: "grid", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                    <label style={{ ...S.lbl, marginBottom: 0, color: "#6D28D9" }}>🏆 Ajuster les points</label>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#0F172A" }}>
+                      Actuel : {(editingCandidate.points ?? 0).toLocaleString("fr-FR")} pts
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <input
+                      type="number" min={1} value={pointQty}
+                      onChange={e => setPointQty(e.target.value)}
+                      placeholder="Nombre de points"
+                      style={{ ...S.inp, background: "#fff", borderColor: "#DDD6FE" }}
+                    />
+                    <input
+                      type="password" inputMode="numeric" autoComplete="off" value={pointCode}
+                      onChange={e => setPointCode(e.target.value)}
+                      placeholder="Code de validation *"
+                      style={{ ...S.inp, background: "#fff", borderColor: "#DDD6FE" }}
+                    />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <button
+                      onClick={() => adjustPoints(1)}
+                      disabled={pointAdjusting || !pointQty || !pointCode.trim()}
+                      style={{ padding: "11px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: "inherit", background: "#7C3AED", color: "#fff", opacity: pointAdjusting || !pointQty || !pointCode.trim() ? 0.5 : 1 }}
+                    >
+                      + Ajouter
+                    </button>
+                    <button
+                      onClick={() => adjustPoints(-1)}
+                      disabled={pointAdjusting || !pointQty || !pointCode.trim()}
+                      style={{ padding: "11px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: "inherit", background: "#EF4444", color: "#fff", opacity: pointAdjusting || !pointQty || !pointCode.trim() ? 0.5 : 1 }}
+                    >
+                      − Réduire
+                    </button>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 11.5, color: "#5B21B6", lineHeight: 1.5 }}>
+                    Même code de validation que pour les votes, vérifié par le serveur. Le total de points ne descend jamais sous 0. Le classement est mis à jour en direct.
                   </p>
                 </div>
               )}

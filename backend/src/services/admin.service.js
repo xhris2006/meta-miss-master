@@ -186,6 +186,34 @@ async function adjustCandidateVotes(id, { delta, code }) {
   return updated;
 }
 
+// ── Ajustement manuel des points (protégé par le même code que les votes) ──────
+// delta > 0 : ajoute des points · delta < 0 : en retire (le total ne descend pas sous 0).
+async function adjustCandidatePoints(id, { delta, code }) {
+  if (String(code || "").trim() !== VOTES_ADJUST_CODE) {
+    throw new AppError("Code de validation incorrect", 403);
+  }
+  const parsed = +delta;
+  if (!Number.isInteger(parsed) || parsed === 0) {
+    throw new AppError("Le nombre de points doit être un entier non nul", 400);
+  }
+  const candidate = await prisma.candidate.findUnique({ where: { id } });
+  if (!candidate) throw new AppError("Candidat introuvable", 404);
+  if (candidate.status !== "APPROVED") {
+    throw new AppError("Seuls les candidats approuvés peuvent voir leurs points ajustés", 400);
+  }
+
+  const newTotal = Math.max(0, (candidate.points || 0) + parsed);
+  const updated = await prisma.candidate.update({
+    where: { id },
+    data: { points: newTotal }
+  });
+
+  invalidateRankingCache();   // vider le cache classement/stats
+  await emitRankingUpdate();  // pousser le nouveau classement en temps réel
+
+  return updated;
+}
+
 // ── updateCandidate — supporte maintenant photoUrl ─────────────────────────────
 async function updateCandidate(id, { name, city, age, bio, type, status, photoUrl, instagram, tiktok, snap, whatsappFan, phone }) {
   const candidate = await prisma.candidate.findUnique({ where: { id } });
@@ -345,6 +373,7 @@ async function getAllUsers({ page, limit }) {
 module.exports = {
   getAllCandidates, approveCandidate, rejectCandidate, updateCandidate, deleteCandidate,
   adjustCandidateVotes,
+  adjustCandidatePoints,
   getAllPayments, refundPayment, deleteVote, resetAllVotes, reconcilePendingPayments,
   getDashboardStats, getAllUsers
 };
