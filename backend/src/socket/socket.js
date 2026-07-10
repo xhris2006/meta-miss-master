@@ -1,6 +1,7 @@
 const { Server } = require("socket.io");
 const { PrismaClient } = require("@prisma/client");
 const logger = require("../utils/logger");
+const rankingService = require("../services/ranking.service");
 
 const prisma = new PrismaClient();
 let io = null;
@@ -33,7 +34,7 @@ async function emitRankingUpdate() {
   if (!io) return;
 
   try {
-    const [miss, master] = await Promise.all([
+    const [miss, master, topVoters] = await Promise.all([
       prisma.candidate.findMany({
         where: { status: "APPROVED", type: "MISS" },
         orderBy: [{ totalVotes: "desc" }, { points: "desc" }],
@@ -45,12 +46,14 @@ async function emitRankingUpdate() {
         orderBy: [{ totalVotes: "desc" }, { points: "desc" }],
         take: 10,
         select: { id: true, name: true, photoUrl: true, city: true, totalVotes: true, points: true }
-      })
+      }),
+      rankingService.getTopVoters(10).catch(() => [])
     ]);
 
     io.to("ranking").emit("ranking:update", {
       miss: miss.map((c, i) => ({ ...c, rank: i + 1 })),
       master: master.map((c, i) => ({ ...c, rank: i + 1 })),
+      topVoters,
       updatedAt: new Date().toISOString()
     });
   } catch (err) {

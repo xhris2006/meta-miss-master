@@ -21,6 +21,16 @@ class RankingController {
     }
   }
 
+  async getTopVoters(req, res, next) {
+    try {
+      const { limit = 10 } = req.query;
+      const voters = await rankingService.getTopVoters(+limit);
+      res.json({ success: true, data: voters });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getStats(req, res, next) {
     try {
       const stats = await rankingService.getStats();

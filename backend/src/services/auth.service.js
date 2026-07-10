@@ -41,6 +41,21 @@ function buildAdminUser() {
   };
 }
 
+// Empreinte des identifiants admin, embarquée dans les jetons admin (champ `cv`).
+// Si un identifiant change (mot de passe, email, n° de propriété, nom de la mère),
+// l'empreinte change : tous les jetons émis AVANT la modification deviennent
+// invalides (access + refresh) → les sessions admin ouvertes sont fermées et
+// une reconnexion est obligatoire.
+function adminCredsFingerprint() {
+  try {
+    const c = getAdminConfig();
+    const material = [c.email, c.passwordHash || c.passwordRaw, c.propertyNumber, c.motherFullName].join("|");
+    return crypto.createHash("sha256").update(material).digest("hex").slice(0, 16);
+  } catch {
+    return null; // config admin absente → aucun jeton admin ne peut être valide
+  }
+}
+
 // Lockout en mémoire : ip → { count, until }
 const ADMIN_LOCKOUT = new Map();
 const MAX_ADMIN_ATTEMPTS = 5;
@@ -102,7 +117,12 @@ async function loginAdmin({ email, password, propertyNumber, motherFullName, ip 
   ADMIN_LOCKOUT.delete(ip);
 
   const user   = buildAdminUser();
-  const tokens = generateTokens({ id: user.id, email: user.email, role: user.role });
+  const tokens = generateTokens({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    cv: adminCredsFingerprint(),
+  });
   return { user, ...tokens };
 }
 
@@ -235,8 +255,14 @@ async function refresh(refreshToken) {
     });
 
     if (payload.role === "ADMIN" && payload.id === "env-admin") {
+      // Identifiants admin modifiés depuis l'émission du refresh token →
+      // on refuse le renouvellement : reconnexion obligatoire.
+      const cv = adminCredsFingerprint();
+      if (!cv || payload.cv !== cv) {
+        throw new AppError("Identifiants modifiés — reconnexion requise", 401);
+      }
       const user = buildAdminUser();
-      return generateTokens({ id: user.id, email: user.email, role: user.role });
+      return generateTokens({ id: user.id, email: user.email, role: user.role, cv });
     }
 
     const user = await prisma.user.findUnique({ where: { id: payload.id } });
@@ -249,4 +275,4 @@ async function refresh(refreshToken) {
   }
 }
 
-module.exports = { loginAdmin, registerUser, loginUser, loginOrRegisterGoogle, getMe, refresh };
+module.exports = { loginAdmin, registerUser, loginUser, loginOrRegisterGoogle, getMe, refresh, adminCredsFingerprint };
