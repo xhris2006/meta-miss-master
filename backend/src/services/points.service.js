@@ -2,10 +2,12 @@ const prisma = require("../utils/prismaClient");
 const logger = require("../utils/logger");
 const { invalidateRankingCache } = require("./ranking.service");
 const { emitRankingUpdate } = require("../socket/socket");
+const settingsService = require("./settings.service");
 
-// Points attribués chaque soir selon le rang au classement (par votes) :
-// #1 = 100, #2 = 90, … #10 = 10 (écart de 10). Au-delà du top 10 : 0 point.
-const POINTS_BY_RANK = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10];
+// Barème par défaut : #1 = 100, #2 = 90, … #10 = 10. L'admin peut le modifier
+// chaque jour via PUT /admin/points/config (stocké dans les réglages du site) ;
+// l'attribution du soir lit le barème enregistré au moment où elle s'exécute.
+const POINTS_BY_RANK = settingsService.DEFAULT_POINTS_BY_RANK;
 
 // Le Cameroun est en UTC+1 (WAT, pas de changement d'heure). La "journée locale"
 // bascule à minuit heure du Cameroun.
@@ -33,11 +35,14 @@ async function awardDailyPoints({ force = false, day = cameroonDayKey() } = {}) 
     }
   }
 
+  // Barème du jour (configuré par l'admin, défaut 100 → 10).
+  const scale = await settingsService.getPointsScale();
+
   // Classement du jour : approuvés, triés par votes (départage : points, puis ancienneté).
   const top = await prisma.candidate.findMany({
     where: { status: "APPROVED" },
     orderBy: [{ totalVotes: "desc" }, { points: "desc" }, { createdAt: "asc" }],
-    take: POINTS_BY_RANK.length,
+    take: scale.length,
     select: { id: true, name: true, totalVotes: true },
   });
 
@@ -45,7 +50,7 @@ async function awardDailyPoints({ force = false, day = cameroonDayKey() } = {}) 
     candidateId: c.id,
     name: c.name,
     rank: i + 1,
-    points: POINTS_BY_RANK[i],
+    points: scale[i],
     votes: c.totalVotes,
   }));
 

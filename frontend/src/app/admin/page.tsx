@@ -107,13 +107,14 @@ export default function AdminPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [s, c, p, u, ct, dv] = await Promise.all([
+      const [s, c, p, u, ct, dv, pc] = await Promise.all([
         api.get("/admin/stats"),
         api.get("/admin/candidates?limit=100"),
         api.get("/admin/payments?limit=50"),
         api.get("/admin/users?limit=50"),
         api.get("/admin/contests").catch(() => ({ data: { data: [] } })),
         api.get("/admin/double-votes").catch(() => ({ data: { data: { enabled: false } } })),
+        api.get("/admin/points/config").catch(() => ({ data: { data: { pointsByRank: null } } })),
       ]);
       setStats(s.data.data);
       setCandidates(c.data.data.candidates || []);
@@ -121,6 +122,8 @@ export default function AdminPage() {
       setUsers(u.data.data.users || []);
       setContests(ct.data.data || []);
       setDoubleVotes(dv.data?.data?.enabled === true);
+      const scale = pc.data?.data?.pointsByRank;
+      if (Array.isArray(scale) && scale.length > 0) setPointsScale(scale.map(String));
     } catch { toast.error("Erreur chargement"); }
     setLoading(false);
   };
@@ -259,10 +262,15 @@ export default function AdminPage() {
   const [reconciling, setReconciling] = useState(false);
   const [awardingPoints, setAwardingPoints] = useState(false);
 
+  // Barème des points quotidiens (modifiable chaque jour par l'admin)
+  const DEFAULT_SCALE = ["100", "90", "80", "70", "60", "50", "40", "30", "20", "10"];
+  const [pointsScale, setPointsScale] = useState<string[]>([...DEFAULT_SCALE]);
+  const [pointsScaleSaving, setPointsScaleSaving] = useState(false);
+
   // Attribution manuelle des points du jour (filet de secours si le cron de 21h
   // a échoué). Idempotent côté serveur : un seul passage par jour.
   const awardPoints = async () => {
-    if (!confirm("Attribuer les points du classement du jour (100 → 10 pour le top 10) et remettre les votes à zéro ?\n\nNormalement automatique à 21h. À ne lancer manuellement que si le cron a échoué.")) return;
+    if (!confirm(`Attribuer les points du classement du jour selon le barème configuré (1er = ${pointsScale[0] || "?"} pts) et remettre les votes à zéro ?\n\nNormalement automatique à 21h. À ne lancer manuellement que si le cron a échoué.`)) return;
     setAwardingPoints(true);
     try {
       const res = await api.post("/admin/points/award", {}, { timeout: 60000 });
@@ -274,6 +282,27 @@ export default function AdminPage() {
     }
     setAwardingPoints(false);
   };
+  // Enregistre le barème du jour (ex. 1er = 300 aujourd'hui, 100 demain) :
+  // l'attribution de 21h utilisera le barème enregistré à ce moment-là.
+  const savePointsScale = async () => {
+    const nums = pointsScale.map(v => parseInt(String(v).trim(), 10));
+    if (nums.some(n => !Number.isInteger(n) || n < 0)) {
+      toast.error("Le barème ne doit contenir que des entiers ≥ 0");
+      return;
+    }
+    setPointsScaleSaving(true);
+    try {
+      const res = await api.put("/admin/points/config", { pointsByRank: nums });
+      const arr = res.data?.data?.pointsByRank;
+      if (Array.isArray(arr)) setPointsScale(arr.map(String));
+      toast.success(res.data?.message || "Barème enregistré ✓", { duration: 5000 });
+    } catch (err: any) {
+      const status = err?.response?.status;
+      toast.error(err?.response?.data?.message || (status === 404 ? "Route absente (404) — backend non déployé" : "Erreur lors de l'enregistrement du barème"), { duration: 6000 });
+    }
+    setPointsScaleSaving(false);
+  };
+
   const candidateNameById: Record<string, string> = Object.fromEntries(candidates.map((c: any) => [c.id, c.name]));
 
   // Re-vérifie auprès des fournisseurs les paiements en attente et crédite les
@@ -460,21 +489,62 @@ export default function AdminPage() {
               </div>
 
               {/* Points quotidiens (attribution auto à 21h, bouton = secours) */}
-              <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", borderColor: "#FDE68A", background: "#FFFBEB", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-                <div style={{ flex: 1, minWidth: 220 }}>
-                  <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
-                    ⭐ Points du jour
-                    <span style={{ ...S.pill("#F59E0B") }}>AUTO 21h</span>
+              <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", borderColor: "#FDE68A", background: "#FFFBEB" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+                      ⭐ Points du jour
+                      <span style={{ ...S.pill("#F59E0B") }}>AUTO 21h</span>
+                    </div>
+                    <p style={{ color: "#92400E", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+                      Chaque soir à <strong>21h00 (Cameroun)</strong>, le top 10 du classement reçoit les points
+                      du <strong>barème ci-dessous</strong>, puis les votes sont remis à zéro pour la manche suivante.
+                      Ce bouton n'est utile que si l'attribution automatique a échoué.
+                    </p>
                   </div>
-                  <p style={{ color: "#92400E", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
-                    Chaque soir à <strong>21h00 (Cameroun)</strong>, le top 10 du classement reçoit
-                    <strong> 100 → 10 points</strong> (écart de 10), puis les votes sont remis à zéro pour la manche suivante.
-                    Ce bouton n'est utile que si l'attribution automatique a échoué.
-                  </p>
+                  <button onClick={awardPoints} disabled={awardingPoints} style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 14, background: awardingPoints ? "#FCD34D" : "#F59E0B", color: "#fff", border: "none", cursor: awardingPoints ? "wait" : "pointer", fontWeight: 800, fontSize: 14, boxShadow: "0 4px 16px rgba(245,158,11,0.3)", fontFamily: "inherit", flexShrink: 0 }}>
+                    <Trophy size={16} /> {awardingPoints ? "Attribution..." : "Attribuer maintenant"}
+                  </button>
                 </div>
-                <button onClick={awardPoints} disabled={awardingPoints} style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 14, background: awardingPoints ? "#FCD34D" : "#F59E0B", color: "#fff", border: "none", cursor: awardingPoints ? "wait" : "pointer", fontWeight: 800, fontSize: 14, boxShadow: "0 4px 16px rgba(245,158,11,0.3)", fontFamily: "inherit", flexShrink: 0 }}>
-                  <Trophy size={16} /> {awardingPoints ? "Attribution..." : "Attribuer maintenant"}
-                </button>
+
+                {/* Barème modifiable : points par rang, appliqué à la prochaine attribution */}
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1.5px dashed #FDE68A" }}>
+                  <div style={{ fontWeight: 800, color: "#92400E", fontSize: 13.5, marginBottom: 10 }}>
+                    🏆 Barème du jour — points gagnés par rang (modifiable chaque jour)
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(86px, 1fr))", gap: 8 }}>
+                    {pointsScale.map((v, i) => (
+                      <div key={i} style={{ display: "grid", gap: 3 }}>
+                        <label style={{ fontSize: 11, fontWeight: 800, color: "#B45309", textAlign: "center" }}>
+                          {i === 0 ? "1er" : `${i + 1}e`}
+                        </label>
+                        <input
+                          type="number" min={0} value={v}
+                          onChange={e => setPointsScale(prev => prev.map((p, j) => j === i ? e.target.value : p))}
+                          style={{ padding: "9px 6px", borderRadius: 10, border: "1.5px solid #FDE68A", background: "#fff", fontSize: 13.5, fontWeight: 800, textAlign: "center", color: "#0F172A", fontFamily: "inherit", width: "100%" }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
+                    <button
+                      onClick={savePointsScale}
+                      disabled={pointsScaleSaving}
+                      style={{ padding: "10px 18px", borderRadius: 12, border: "none", cursor: pointsScaleSaving ? "wait" : "pointer", fontWeight: 800, fontSize: 13.5, fontFamily: "inherit", background: pointsScaleSaving ? "#FCD34D" : "#D97706", color: "#fff" }}
+                    >
+                      {pointsScaleSaving ? "Enregistrement..." : "💾 Enregistrer le barème"}
+                    </button>
+                    <button
+                      onClick={() => setPointsScale([...DEFAULT_SCALE])}
+                      style={{ padding: "10px 14px", borderRadius: 12, border: "1.5px solid #FDE68A", cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: "inherit", background: "#fff", color: "#92400E" }}
+                    >
+                      Rétablir 100 → 10
+                    </button>
+                    <span style={{ fontSize: 11.5, color: "#92400E" }}>
+                      Ex. : mettez 300 pour le 1er aujourd'hui, revenez demain mettre 100 — l'attribution de 21h utilise le barème enregistré.
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", borderColor: "#FECACA", background: "#FFFCFC" }}>

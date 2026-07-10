@@ -1,4 +1,5 @@
 const prisma = require("../utils/prismaClient");
+const { AppError } = require("../utils/errors");
 
 // Clés de réseaux sociaux autorisées (whitelist). Toute autre clé est ignorée.
 const SOCIAL_KEYS = [
@@ -65,10 +66,54 @@ async function setDoubleVotes(enabled) {
   return { enabled: value };
 }
 
+// ─── Barème des points quotidiens (modifiable par l'admin) ──────────────────
+// pointsByRank[i] = points gagnés par le rang i+1 au classement du soir.
+// L'admin peut le changer chaque jour (ex. 1er = 300 aujourd'hui, 100 demain) :
+// l'attribution de 21h lit TOUJOURS la valeur enregistrée au moment où elle tourne.
+const DEFAULT_POINTS_BY_RANK = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10];
+const MAX_POINTS_RANKS = 20;
+const MAX_POINTS_VALUE = 1_000_000;
+
+function sanitizePointsScale(input) {
+  if (!Array.isArray(input) || input.length === 0 || input.length > MAX_POINTS_RANKS) return null;
+  const out = [];
+  for (const v of input) {
+    const n = +v;
+    if (!Number.isInteger(n) || n < 0 || n > MAX_POINTS_VALUE) return null;
+    out.push(n);
+  }
+  return out;
+}
+
+async function getPointsScale() {
+  const data = await getRaw();
+  return sanitizePointsScale(data.pointsByRank) || [...DEFAULT_POINTS_BY_RANK];
+}
+
+async function setPointsScale(input) {
+  const scale = sanitizePointsScale(input);
+  if (!scale) {
+    throw new AppError(
+      `Barème invalide : liste de 1 à ${MAX_POINTS_RANKS} entiers entre 0 et ${MAX_POINTS_VALUE}`,
+      400
+    );
+  }
+  const data = await getRaw();
+  await saveRaw({
+    ...data,
+    pointsByRank: scale,
+    pointsByRankUpdatedAt: new Date().toISOString(),
+  });
+  return scale;
+}
+
 module.exports = {
   getSocialLinks,
   updateSocialLinks,
   getDoubleVotes,
   setDoubleVotes,
+  getPointsScale,
+  setPointsScale,
+  DEFAULT_POINTS_BY_RANK,
   SOCIAL_KEYS,
 };

@@ -309,6 +309,25 @@ class AdminController {
       res.json({ success: true, data: { last, today: pointsService.cameroonDayKey() } });
     } catch (err) { next(err); }
   }
+
+  // ── Barème des points quotidiens (configurable chaque jour) ──────────────
+  async getPointsConfig(req, res, next) {
+    try {
+      const pointsByRank = await settingsService.getPointsScale();
+      res.json({ success: true, data: { pointsByRank } });
+    } catch (err) { next(err); }
+  }
+
+  async setPointsConfig(req, res, next) {
+    try {
+      const pointsByRank = await settingsService.setPointsScale(req.body?.pointsByRank);
+      res.json({
+        success: true,
+        message: `Barème enregistré — le 1er gagnera ${pointsByRank[0]} point(s) ce soir`,
+        data: { pointsByRank },
+      });
+    } catch (err) { next(err); }
+  }
 }
 
 module.exports = new AdminController();

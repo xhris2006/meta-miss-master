@@ -25,6 +25,8 @@ router.delete("/votes/:id", adminController.deleteVote);
 router.post("/votes/reset", adminController.resetVotes);
 router.get("/points/status", adminController.getPointsStatus);
 router.post("/points/award", adminController.awardPoints);
+router.get("/points/config", adminController.getPointsConfig);
+router.put("/points/config", adminController.setPointsConfig);
 router.get("/double-votes", adminController.getDoubleVotes);
 router.put("/double-votes", adminController.setDoubleVotes);
 router.get("/social-links", adminController.getSocialLinks);
