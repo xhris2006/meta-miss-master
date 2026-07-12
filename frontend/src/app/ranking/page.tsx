@@ -17,33 +17,19 @@ interface RC {
   rank: number;
 }
 
-interface TopVoter {
-  username: string;
-  totalVotes: number;
-  candidateName: string;
-  candidateType: "MISS" | "MASTER";
-}
-
 export default function RankingPage() {
   const t = useT();
   const [miss, setMiss] = useState<RC[]>([]);
-  const [topVoters, setTopVoters] = useState<TopVoter[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingVoters, setLoadingVoters] = useState(true);
   const [live, setLive] = useState(false);
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ||
     "http://localhost:5000";
 
   useEffect(() => {
-    Promise.all([
-      api.get("/ranking?type=MISS").then((r) => setMiss(r.data.data || [])),
-      api
-        .get("/ranking/top-voters")
-        .then((r) => setTopVoters(r.data.data || []))
-        .catch(() => {})
-        .finally(() => setLoadingVoters(false)),
-    ])
+    api
+      .get("/ranking?type=MISS")
+      .then((r) => setMiss(r.data.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
 
@@ -58,7 +44,6 @@ export default function RankingPage() {
     socket.on("disconnect", () => setLive(false));
     socket.on("ranking:update", (d) => {
       setMiss(d.miss || []);
-      if (d.topVoters) setTopVoters(d.topVoters);
     });
     return () => {
       socket.disconnect();
@@ -313,178 +298,6 @@ export default function RankingPage() {
           animation: live-pulse 1.5s infinite;
         }
         @keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
-
-        /* ═══════════════════════════════════
-           TOP VOTANTS
-        ═══════════════════════════════════ */
-        .tv-card {
-          margin: 0 16px 16px;
-          background: var(--bg-white);
-          border: 1.5px solid var(--border);
-          border-radius: 18px;
-          overflow: hidden;
-          box-shadow: var(--shadow);
-        }
-        .tv-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 14px 16px 12px;
-          background: var(--bg);
-          border-bottom: 1px solid var(--border);
-        }
-        .tv-header-left {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 0.95rem;
-          font-weight: 900;
-          color: var(--text);
-        }
-        .tv-live-badge {
-          font-size: 0.6rem;
-          font-weight: 800;
-          background: #10B981;
-          color: #fff;
-          padding: 3px 9px;
-          border-radius: 6px;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          display: flex;
-          align-items: center;
-          gap: 5px;
-        }
-        .tv-live-badge-dot {
-          width: 6px; height: 6px;
-          border-radius: 50%;
-          background: #fff;
-          animation: live-pulse 1.5s infinite;
-          flex-shrink: 0;
-        }
-        .tv-row {
-          display: grid;
-          grid-template-columns: 40px 1fr auto;
-          align-items: center;
-          gap: 10px;
-          padding: 11px 16px;
-          border-bottom: 1px solid var(--border-light);
-          transition: background 0.12s;
-        }
-        .tv-row:last-child { border-bottom: none; }
-        .tv-row:hover { background: var(--bg); }
-        .tv-rank-cell {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-        .tv-rank-medal {
-          font-size: 1.3rem;
-          line-height: 1;
-        }
-        .tv-rank-number {
-          width: 26px; height: 26px;
-          border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 0.72rem;
-          font-weight: 800;
-          background: var(--bg);
-          color: var(--text-muted);
-          border: 1.5px solid var(--border);
-        }
-        .tv-user-info { min-width: 0; }
-        .tv-username {
-          font-size: 0.85rem;
-          font-weight: 700;
-          color: var(--text);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          margin-bottom: 4px;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .tv-voted-for {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 0.7rem;
-          color: var(--text-muted);
-          flex-wrap: wrap;
-        }
-        .tv-candidate-chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 3px;
-          background: var(--bg);
-          border: 1px solid var(--border);
-          border-radius: 20px;
-          padding: 1px 8px;
-          font-weight: 700;
-          color: var(--text);
-          font-size: 0.68rem;
-          max-width: 110px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .tv-type-badge-miss {
-          font-size: 0.58rem;
-          font-weight: 800;
-          background: #EFF6FF;
-          color: #2563EB;
-          padding: 2px 6px;
-          border-radius: 4px;
-          letter-spacing: 0.04em;
-          flex-shrink: 0;
-        }
-        .tv-type-badge-master {
-          font-size: 0.58rem;
-          font-weight: 800;
-          background: #F0FDF4;
-          color: #16A34A;
-          padding: 2px 6px;
-          border-radius: 4px;
-          letter-spacing: 0.04em;
-          flex-shrink: 0;
-        }
-        .tv-votes-right {
-          text-align: right;
-          flex-shrink: 0;
-        }
-        .tv-vote-count {
-          font-size: 1rem;
-          font-weight: 900;
-          color: var(--text);
-          line-height: 1.1;
-        }
-        .tv-vote-label {
-          font-size: 0.6rem;
-          color: var(--text-muted);
-          font-weight: 500;
-        }
-        .tv-empty {
-          padding: 44px 24px;
-          text-align: center;
-        }
-        .tv-skel-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 11px 16px;
-          border-bottom: 1px solid var(--border-light);
-        }
-        .tv-skel-row:last-child { border-bottom: none; }
-
-        /* Mobile responsive top votants */
-        @media (max-width: 480px) {
-          .tv-row { grid-template-columns: 34px 1fr auto; gap: 8px; padding: 10px 12px; }
-          .tv-rank-medal { font-size: 1.1rem; }
-          .tv-username { font-size: 0.78rem; }
-          .tv-vote-count { font-size: 0.9rem; }
-          .tv-candidate-chip { max-width: 90px; }
-        }
 
         /* Share card */
         .rk-share-card {
@@ -751,177 +564,6 @@ export default function RankingPage() {
                   }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" /></svg>
                   </button>
-                </div>
-              </div>
-            );
-          })}
-      </div>
-
-      {/* ══════════════════════════════════════
-          ── TOP VOTANTS ──
-      ══════════════════════════════════════ */}
-      <div className="tv-card">
-        {/* Header */}
-        <div className="tv-header">
-          <div className="tv-header-left">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="#F59E0B"
-              aria-hidden="true"
-            >
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-            Top votants
-          </div>
-          <div className="tv-live-badge">
-            <div className="tv-live-badge-dot" />
-            Live
-          </div>
-        </div>
-
-        {/* Loading skeletons */}
-        {loadingVoters &&
-          [1, 2, 3].map((i) => (
-            <div key={i} className="tv-skel-row">
-              <div
-                className="shimmer"
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  flexShrink: 0,
-                }}
-              />
-              <div style={{ flex: 1 }}>
-                <div
-                  className="shimmer"
-                  style={{
-                    height: 13,
-                    borderRadius: 6,
-                    marginBottom: 6,
-                    maxWidth: 120,
-                  }}
-                />
-                <div
-                  className="shimmer"
-                  style={{ height: 11, borderRadius: 6, maxWidth: 160 }}
-                />
-              </div>
-              <div
-                className="shimmer"
-                style={{
-                  width: 32,
-                  height: 20,
-                  borderRadius: 6,
-                  flexShrink: 0,
-                }}
-              />
-            </div>
-          ))}
-
-        {/* Empty state */}
-        {!loadingVoters && topVoters.length === 0 && (
-          <div className="tv-empty">
-            <div style={{ fontSize: "2.2rem", marginBottom: 10 }}>🗳️</div>
-            <div
-              style={{
-                fontWeight: 800,
-                fontSize: "0.9rem",
-                color: "var(--text)",
-                marginBottom: 6,
-              }}
-            >
-              Aucun votant pour l'instant
-            </div>
-            <div
-              style={{
-                fontSize: "0.78rem",
-                color: "var(--text-muted)",
-                lineHeight: 1.6,
-              }}
-            >
-              Les top votants apparaîtront ici dès les premiers votes.
-            </div>
-          </div>
-        )}
-
-        {/* Voter rows */}
-        {!loadingVoters &&
-          topVoters.map((v, i) => {
-            const medals = ["🥇", "🥈", "🥉"];
-            const vDisplay =
-              v.totalVotes >= 1000
-                ? `${(v.totalVotes / 1000).toFixed(1)}K`
-                : String(v.totalVotes);
-
-            return (
-              <div
-                key={`${v.username}-${i}`}
-                className="tv-row fade-up"
-                style={{ animationDelay: `${i * 0.05}s` }}
-              >
-                {/* Rang */}
-                <div className="tv-rank-cell">
-                  {i < 3 ? (
-                    <span className="tv-rank-medal">{medals[i]}</span>
-                  ) : (
-                    <div className="tv-rank-number">{i + 1}</div>
-                  )}
-                </div>
-
-                {/* Infos utilisateur */}
-                <div className="tv-user-info">
-                  <div className="tv-username">
-                    <svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--text-muted)"
-                      strokeWidth="2"
-                      aria-hidden="true"
-                      style={{ flexShrink: 0 }}
-                    >
-                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
-                    {v.username}
-                  </div>
-                  <div className="tv-voted-for">
-                    <span>Vote pour</span>
-                    <span className="tv-candidate-chip">
-                      <svg
-                        width="9"
-                        height="9"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        aria-hidden="true"
-                      >
-                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                      </svg>
-                      {v.candidateName}
-                    </span>
-                    <span
-                      className={
-                        v.candidateType === "MASTER"
-                          ? "tv-type-badge-master"
-                          : "tv-type-badge-miss"
-                      }
-                    >
-                      {v.candidateType === "MASTER" ? "Master" : "Miss"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Nombre de votes */}
-                <div className="tv-votes-right">
-                  <div className="tv-vote-count">{vDisplay}</div>
-                  <div className="tv-vote-label">votes</div>
                 </div>
               </div>
             );
