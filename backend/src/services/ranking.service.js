@@ -17,7 +17,7 @@ async function getGlobalRanking(type) {
   const candidates = await prisma.candidate.findMany({
     where,
     // Tri par votes ; départage par points cumulés (utile juste après la remise
-    // à zéro des votes de 21h, où tous les votes valent 0).
+    // à zéro lors de l'attribution manuelle, où tous les votes valent 0).
     orderBy: [{ totalVotes: "desc" }, { points: "desc" }],
     select: { id: true, name: true, type: true, city: true, photoUrl: true, totalVotes: true, points: true }
   });

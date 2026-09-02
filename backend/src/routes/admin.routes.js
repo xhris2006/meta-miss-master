@@ -31,6 +31,8 @@ router.get("/double-votes", adminController.getDoubleVotes);
 router.put("/double-votes", adminController.setDoubleVotes);
 router.get("/social-links", adminController.getSocialLinks);
 router.put("/social-links", adminController.updateSocialLinks);
+router.get("/presenter", adminController.getPresenter);
+router.put("/presenter", upload.single("photo"), adminController.updatePresenter);
 router.get("/contests", adminController.getContests);
 router.post("/contest", adminController.createContest);
 router.patch("/contest/:id", adminController.updateContest);

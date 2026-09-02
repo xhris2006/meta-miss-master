@@ -83,8 +83,8 @@ export default function VoteByIdPage() {
   const isDark = theme === "dark";
 
   const [candidate, setCandidate] = useState<any>(null);
-  const [amount, setAmount] = useState(500);
-  const [customAmount, setCustomAmount] = useState("500");
+  const [amount, setAmount] = useState(100);
+  const [customAmount, setCustomAmount] = useState("100");
   const [method, setMethod] = useState("cameroon");
   const [country, setCountry] = useState("CM");
   const [voterName, setVoterName] = useState("");
@@ -156,7 +156,7 @@ export default function VoteByIdPage() {
     return `${min}:${sec.toString().padStart(2, "0")}`;
   };
 
-  const votes = Math.floor(amount / 100);
+  const votes = Math.floor(amount / 50);
   const effectiveVotes = doubleVotes ? votes * 2 : votes;
   const selectedMethod = METHODS.find((m) => m.id === method) || METHODS[0];
   // Provider reellement utilise (Cameroun & Gabon d'Afrique => agregateur precis, sans frais).
@@ -181,7 +181,7 @@ export default function VoteByIdPage() {
     setCustomAmount(val);
     const n = parseInt(val, 10);
     if (isNaN(n) || n < 100) return;
-    setAmount(Math.round(n / 100) * 100);
+    setAmount(Math.max(100, Math.round(n / 50) * 50));
   };
 
   const handlePreset = (p: number) => {
@@ -525,7 +525,7 @@ export default function VoteByIdPage() {
           onClick={() => {
             if (!voterName.trim() || !voterEmail.trim()) { toast.error(t.error); return; }
             if (amount < 100 || amount % 100 !== 0) { toast.error(t.amountMultipleError || "Le montant doit être un multiple de 100 FCFA"); return; }
-            if (effectiveProvider === "geniuspay" && amount < 200) { toast.error("Montant minimum 200 FCFA (2 votes) pour ce mode de paiement"); return; }
+            if (effectiveProvider === "geniuspay" && amount < 100) { toast.error("Montant minimum 100 FCFA (2 votes) pour ce mode de paiement"); return; }
             setStep("confirm");
           }}
           style={{ opacity: (!voterName.trim() || !voterEmail.trim() || amount < 100) ? 0.5 : 1 }}

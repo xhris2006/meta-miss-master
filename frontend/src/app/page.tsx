@@ -16,10 +16,21 @@ export default function LandingPage() {
   const [doubleVotes, setDoubleVotes] = useState(false);
   const [countdown, setCountdown] = useState<Countdown | null>(null);
   const [votesOpen, setVotesOpen] = useState(false);
+  const [presenter, setPresenter] = useState<{ name: string; photoUrl: string } | null>(null);
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
 
   useEffect(() => {
     api.get("/settings/double-votes")
       .then((r) => setDoubleVotes(r.data?.data?.enabled === true))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    api.get("/settings/presenter")
+      .then((r) => {
+        const data = r.data?.data;
+        if (data?.name && data?.photoUrl) setPresenter(data);
+      })
       .catch(() => {});
   }, []);
 
@@ -252,6 +263,16 @@ export default function LandingPage() {
             <div>
               <div style={{ fontWeight: 800, fontSize: "0.92rem" }}>{t.doubleVotesTitle || "Votes doubles activés !"}</div>
               <div style={{ fontSize: "0.74rem", opacity: 0.92 }}>{t.doubleVotesDesc || "Pendant la promo, chaque vote compte ×2 pour votre candidate."}</div>
+            </div>
+          </div>
+        )}
+
+        {presenter && (
+          <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "18px 0", padding: 14, border: "1.5px solid var(--border)", borderRadius: 18, background: "var(--bg-white)", boxShadow: "var(--shadow)" }}>
+            <img src={presenter.photoUrl.startsWith("http") ? presenter.photoUrl : `${apiBase}${presenter.photoUrl}`} alt={presenter.name} style={{ width: 68, height: 82, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: "0.62rem", fontWeight: 800, color: "var(--blue)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Présentatrice</div>
+              <div style={{ fontSize: "1rem", fontWeight: 900, color: "var(--text)" }}>{presenter.name}</div>
             </div>
           </div>
         )}

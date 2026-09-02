@@ -27,7 +27,7 @@ export default function VoteListPage() {
       </div>
       <div style={{ padding: "0 16px 20px" }}>
         <p style={{ fontSize: "0.84rem", color: "var(--text-muted)", marginBottom: 20, lineHeight: 1.6 }}>
-          Choisissez un candidat et votez. <strong style={{ color: "var(--text)" }}>1 vote = 100 FCFA</strong>
+          Choisissez un candidat et votez. <strong style={{ color: "var(--text)" }}>1 vote = 50 FCFA · minimum 2 votes (100 FCFA)</strong>
         </p>
 
         {/* Skeletons pendant le chargement */}

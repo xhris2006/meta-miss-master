@@ -9,7 +9,7 @@ const { emitRankingUpdate } = require("../socket/socket");
 const { invalidateRankingCache } = require("./ranking.service");
 const settingsService = require("./settings.service");
 
-const VOTE_PRICE = 100;
+const VOTE_PRICE = 50;
 const GENIUSPAY_BASE_URL = "https://pay.genius.ci/api/v1/merchant";
 const PAYPAL_BASE_URL = process.env.PAYPAL_BASE_URL || "https://api-m.sandbox.paypal.com";
 const PAYPAL_CURRENCY = process.env.PAYPAL_CURRENCY || "USD";
@@ -301,8 +301,8 @@ async function initGeniusPay({ txRef, amount, userEmail, userName, candidateName
     throw new AppError("Clés GeniusPay non configurées", 500);
   }
 
-  if (amount < 200) {
-    throw new AppError("Montant minimum pour GeniusPay : 200 FCFA (2 votes)", 400);
+  if (amount < 100) {
+    throw new AppError("Montant minimum pour GeniusPay : 100 FCFA (2 votes)", 400);
   }
 
   const countryCode = toIso2(country);
@@ -751,7 +751,7 @@ async function initializePayment({ candidateId, amount, provider: clientProvider
 
   // `amount` = BASE (votes × 100). Les votes et le revenu se basent dessus.
   const baseVotes = amountToVotes(amount);
-  if (baseVotes < 1) throw new AppError("Montant minimum : 100 FCFA", 400);
+  if (baseVotes < 2) throw new AppError("Montant minimum : 100 FCFA (2 votes)", 400);
 
   // SÉCURITÉ : provider RE-DÉRIVÉ serveur depuis (region, country) — celui du
   // client est ignoré (anti-contournement des frais). Voir resolveProvider.
@@ -759,10 +759,10 @@ async function initializePayment({ candidateId, amount, provider: clientProvider
   const iso2 = toIso2(country);
 
   // Montant minimum selon le provider RE-DÉRIVÉ (pas celui du client).
-  const minAmount = provider === "geniuspay" ? 200 : 100;
+  const minAmount = 100;
   if (amount < minAmount) {
     throw new AppError(
-      `Montant minimum : ${minAmount} FCFA${provider === "geniuspay" ? " (2 votes avec ce mode de paiement)" : ""}`,
+      `Montant minimum : ${minAmount} FCFA (2 votes)`,
       400,
     );
   }

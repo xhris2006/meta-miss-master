@@ -15,6 +15,16 @@ router.get("/double-votes", rankingRateLimiter, async (req, res, next) => {
   }
 });
 
+// Public : présentatrice optionnelle affichée sur l'accueil.
+router.get("/presenter", rankingRateLimiter, async (req, res, next) => {
+  try {
+    const presenter = await settingsService.getPresenter();
+    res.json({ success: true, data: presenter });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Public : infos du concours actif (pour le compte à rebours du début des votes).
 // On renvoie aussi serverTime pour que le front calcule le compte à rebours sur
 // l'horloge serveur (indépendamment d'une horloge client éventuellement fausse).

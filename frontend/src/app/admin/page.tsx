@@ -93,6 +93,11 @@ export default function AdminPage() {
   const [socialSaving, setSocialSaving] = useState(false);
   const [socialLoaded, setSocialLoaded] = useState(false);
 
+  const [presenterValues, setPresenterValues] = useState({ name: "", photoUrl: "" });
+  const [presenterFile, setPresenterFile] = useState<File | null>(null);
+  const [presenterPreview, setPresenterPreview] = useState<string | null>(null);
+  const [presenterSaving, setPresenterSaving] = useState(false);
+
   const [doubleVotes, setDoubleVotes] = useState(false);
   const [doubleSaving, setDoubleSaving] = useState(false);
 
@@ -135,6 +140,11 @@ export default function AdminPage() {
         setSocialValues({ whatsappGroup: d.whatsappGroup || "", whatsappChannel: d.whatsappChannel || "", tiktok: d.tiktok || "", youtube: d.youtube || "", snapchat: d.snapchat || "", telegram: d.telegram || "" });
         setSocialLoaded(true);
       }).catch(() => setSocialLoaded(true));
+      api.get("/admin/presenter").then(r => {
+        const d = r.data.data || {};
+        setPresenterValues({ name: d.name || "", photoUrl: d.photoUrl || "" });
+        setPresenterPreview(d.photoUrl ? (d.photoUrl.startsWith("http") ? d.photoUrl : `${apiBase}${d.photoUrl}`) : null);
+      }).catch(() => {});
     }
   }, [tab]);
 
@@ -255,6 +265,26 @@ export default function AdminPage() {
     setSocialSaving(false);
   };
 
+  const savePresenter = async () => {
+    if (!presenterValues.name.trim() || (!presenterFile && !presenterValues.photoUrl)) {
+      toast.error("Ajoutez le nom et la photo de la présentatrice");
+      return;
+    }
+    setPresenterSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", presenterValues.name.trim());
+      if (presenterFile) fd.append("photo", presenterFile);
+      const res = await api.put("/admin/presenter", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      const d = res.data?.data || {};
+      setPresenterValues({ name: d.name || "", photoUrl: d.photoUrl || "" });
+      setPresenterPreview(d.photoUrl ? (d.photoUrl.startsWith("http") ? d.photoUrl : `${apiBase}${d.photoUrl}`) : null);
+      setPresenterFile(null);
+      toast.success("Présentatrice mise à jour ✓");
+    } catch { toast.error("Erreur de sauvegarde de la présentatrice"); }
+    setPresenterSaving(false);
+  };
+
   const statusColor: Record<string, string> = { APPROVED: "#10B981", PENDING: "#F59E0B", REJECTED: "#EF4444", COMPLETED: "#10B981", FAILED: "#EF4444", REFUNDED: "#EF4444", OPEN: "#10B981", CLOSED: "#64748B" };
   const sc = (s: string) => statusColor[s] || "#64748B";
 
@@ -267,10 +297,9 @@ export default function AdminPage() {
   const [pointsScale, setPointsScale] = useState<string[]>([...DEFAULT_SCALE]);
   const [pointsScaleSaving, setPointsScaleSaving] = useState(false);
 
-  // Attribution manuelle des points du jour (filet de secours si le cron de 21h
-  // a échoué). Idempotent côté serveur : un seul passage par jour.
+  // Attribution manuelle des points du jour. Idempotent côté serveur : un seul passage par jour.
   const awardPoints = async () => {
-    if (!confirm(`Attribuer les points du classement du jour selon le barème configuré (1er = ${pointsScale[0] || "?"} pts) et remettre les votes à zéro ?\n\nNormalement automatique à 21h. À ne lancer manuellement que si le cron a échoué.`)) return;
+    if (!confirm(`Attribuer les points du classement du jour selon le barème configuré (1er = ${pointsScale[0] || "?"} pts) et remettre les votes à zéro ?`)) return;
     setAwardingPoints(true);
     try {
       const res = await api.post("/admin/points/award", {}, { timeout: 60000 });
@@ -283,7 +312,7 @@ export default function AdminPage() {
     setAwardingPoints(false);
   };
   // Enregistre le barème du jour (ex. 1er = 300 aujourd'hui, 100 demain) :
-  // l'attribution de 21h utilisera le barème enregistré à ce moment-là.
+  // La prochaine attribution manuelle utilisera le barème enregistré.
   const savePointsScale = async () => {
     const nums = pointsScale.map(v => parseInt(String(v).trim(), 10));
     if (nums.some(n => !Number.isInteger(n) || n < 0)) {
@@ -488,18 +517,16 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* Points quotidiens (attribution auto à 21h, bouton = secours) */}
+              {/* Attribution manuelle des points et remise à zéro optionnelle */}
               <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", borderColor: "#FDE68A", background: "#FFFBEB" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
                   <div style={{ flex: 1, minWidth: 220 }}>
                     <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
                       ⭐ Points du jour
-                      <span style={{ ...S.pill("#F59E0B") }}>AUTO 21h</span>
                     </div>
                     <p style={{ color: "#92400E", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
-                      Chaque soir à <strong>21h00 (Cameroun)</strong>, le top 10 du classement reçoit les points
-                      du <strong>barème ci-dessous</strong>, puis les votes sont remis à zéro pour la manche suivante.
-                      Ce bouton n'est utile que si l'attribution automatique a échoué.
+                      Le top 10 du classement reçoit les points du <strong>barème ci-dessous</strong>, puis les votes
+                      sont remis à zéro pour la manche suivante lorsque vous lancez l'attribution.
                     </p>
                   </div>
                   <button onClick={awardPoints} disabled={awardingPoints} style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 14, background: awardingPoints ? "#FCD34D" : "#F59E0B", color: "#fff", border: "none", cursor: awardingPoints ? "wait" : "pointer", fontWeight: 800, fontSize: 14, boxShadow: "0 4px 16px rgba(245,158,11,0.3)", fontFamily: "inherit", flexShrink: 0 }}>
@@ -541,7 +568,7 @@ export default function AdminPage() {
                       Rétablir 100 → 10
                     </button>
                     <span style={{ fontSize: 11.5, color: "#92400E" }}>
-                      Ex. : mettez 300 pour le 1er aujourd'hui, revenez demain mettre 100 — l'attribution de 21h utilise le barème enregistré.
+                      Le barème enregistré sera utilisé lors de la prochaine attribution manuelle.
                     </span>
                   </div>
                 </div>
@@ -788,6 +815,34 @@ export default function AdminPage() {
                   <button onClick={saveSocial} disabled={socialSaving} style={{ marginTop: 4, padding: "13px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: socialSaving ? 0.7 : 1, fontFamily: "inherit" }}>
                     {socialSaving ? "Enregistrement..." : "✓ Enregistrer les réseaux"}
                   </button>
+                </div>
+              </div>
+
+              <div style={{ ...S.card, padding: "24px 22px", marginTop: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                  <Camera size={20} color="#2563EB" />
+                  <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 17 }}>Présentatrice</div>
+                </div>
+                <p style={{ fontSize: 13, color: "#94A3B8", marginBottom: 20 }}>
+                  La section apparaîtra sur l'accueil uniquement après l'enregistrement du nom et de la photo.
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 150px", gap: 16, alignItems: "start" }}>
+                  <div style={{ display: "grid", gap: 14 }}>
+                    <div>
+                      <label style={S.lbl}>Nom de la présentatrice</label>
+                      <input value={presenterValues.name} onChange={e => setPresenterValues({ ...presenterValues, name: e.target.value })} placeholder="Ex: Grâce Mbarga" style={S.inp} />
+                    </div>
+                    <div>
+                      <label style={S.lbl}>Photo</label>
+                      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { const file = e.target.files?.[0] || null; setPresenterFile(file); if (file) setPresenterPreview(URL.createObjectURL(file)); }} style={{ ...S.inp, padding: "9px 10px" }} />
+                    </div>
+                    <button onClick={savePresenter} disabled={presenterSaving} style={{ padding: "13px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: presenterSaving ? "wait" : "pointer", fontWeight: 700, fontSize: 14, opacity: presenterSaving ? 0.7 : 1, fontFamily: "inherit" }}>
+                      {presenterSaving ? "Enregistrement..." : "✓ Enregistrer la présentatrice"}
+                    </button>
+                  </div>
+                  <div style={{ aspectRatio: "3 / 4", borderRadius: 14, overflow: "hidden", background: "#F1F5F9", border: "1.5px dashed #CBD5E1", display: "grid", placeItems: "center" }}>
+                    {presenterPreview ? <img src={presenterPreview} alt="Aperçu de la présentatrice" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Camera size={28} color="#94A3B8" />}
+                  </div>
                 </div>
               </div>
             </div>

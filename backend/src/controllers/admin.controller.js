@@ -269,6 +269,25 @@ class AdminController {
     } catch (err) { next(err); }
   }
 
+  // ── Présentatrice affichée sur l'accueil ─────────────────
+  async getPresenter(req, res, next) {
+    try {
+      const data = await settingsService.getPresenter();
+      res.json({ success: true, data });
+    } catch (err) { next(err); }
+  }
+
+  async updatePresenter(req, res, next) {
+    try {
+      const photoUrl = req.file?.path || req.file?.secure_url;
+      const data = await settingsService.updatePresenter({
+        name: req.body?.name,
+        photoUrl,
+      });
+      res.json({ success: true, message: "Présentatrice mise à jour", data });
+    } catch (err) { next(err); }
+  }
+
   // ── Reset all votes ──────────────────────────────────────
   async resetVotes(req, res, next) {
     try {
@@ -286,7 +305,7 @@ class AdminController {
   }
 
   // ── Points quotidiens ────────────────────────────────────
-  // Attribution manuelle (filet de secours si le cron de 21h a échoué).
+  // Attribution manuelle des points et remise à zéro des votes.
   // Idempotent par jour ; force:true ré-attribue même si déjà fait aujourd'hui.
   async awardPoints(req, res, next) {
     try {

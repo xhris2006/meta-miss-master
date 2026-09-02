@@ -2,7 +2,6 @@ require("dotenv").config();
 const http = require("http");
 const app = require("./app");
 const { initSocket } = require("./socket/socket");
-const { startPointsScheduler } = require("./scheduler");
 const logger = require("./utils/logger");
 const prisma = require("./utils/prismaClient");
 
@@ -58,8 +57,6 @@ async function main() {
       logger.info(`🌍 Environment: ${process.env.NODE_ENV}`);
     });
 
-    // Planificateur : attribution quotidienne des points à 21h00 (Cameroun).
-    startPointsScheduler();
   } catch (error) {
     logger.error("❌ Failed to start server:", error);
     process.exit(1);

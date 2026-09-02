@@ -11,6 +11,8 @@ const SOCIAL_KEYS = [
   "telegram",
 ];
 
+const PRESENTER_KEYS = ["presenterName", "presenterPhotoUrl"];
+
 const SINGLETON_ID = "site-settings";
 
 // ─── Accès bas niveau (fusion, jamais d'écrasement total) ───────────────────
@@ -66,10 +68,30 @@ async function setDoubleVotes(enabled) {
   return { enabled: value };
 }
 
+async function getPresenter() {
+  const data = await getRaw();
+  const name = typeof data.presenterName === "string" ? data.presenterName.trim() : "";
+  const photoUrl = typeof data.presenterPhotoUrl === "string" ? data.presenterPhotoUrl.trim() : "";
+  return { name, photoUrl };
+}
+
+async function updatePresenter({ name, photoUrl } = {}) {
+  const data = await getRaw();
+  const merged = {
+    ...data,
+    presenterName: typeof name === "string" ? name.trim().slice(0, 120) : (data.presenterName || ""),
+    presenterPhotoUrl: typeof photoUrl === "string" && photoUrl.trim()
+      ? photoUrl.trim().slice(0, 1000)
+      : (data.presenterPhotoUrl || ""),
+  };
+  await saveRaw(merged);
+  return getPresenter();
+}
+
 // ─── Barème des points quotidiens (modifiable par l'admin) ──────────────────
 // pointsByRank[i] = points gagnés par le rang i+1 au classement du soir.
 // L'admin peut le changer chaque jour (ex. 1er = 300 aujourd'hui, 100 demain) :
-// l'attribution de 21h lit TOUJOURS la valeur enregistrée au moment où elle tourne.
+// l'attribution manuelle lit la valeur enregistrée au moment où elle tourne.
 const DEFAULT_POINTS_BY_RANK = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10];
 const MAX_POINTS_RANKS = 20;
 const MAX_POINTS_VALUE = 1_000_000;
@@ -112,6 +134,8 @@ module.exports = {
   updateSocialLinks,
   getDoubleVotes,
   setDoubleVotes,
+  getPresenter,
+  updatePresenter,
   getPointsScale,
   setPointsScale,
   DEFAULT_POINTS_BY_RANK,
