@@ -1,0 +1,1181 @@
+"use client";
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import api from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
+import toast from "react-hot-toast";
+import {
+  LayoutDashboard, Users, CreditCard, Trophy, User, LogOut,
+  CheckCircle2, XCircle, Trash2, Edit3, Plus, Camera, Globe, FileDown, type LucideIcon
+} from "lucide-react";
+import { downloadCandidatePdf, downloadTransactionsPdf } from "@/lib/pdf";
+
+type Tab = "overview" | "candidates" | "payments" | "contests" | "users";
+const EMPTY_EDIT = { name: "", city: "", age: "", bio: "", type: "MISS", status: "PENDING", instagram: "", tiktok: "", snap: "", whatsappFan: "", phone: "", email: "" };
+const EMPTY_SOCIAL = { whatsappGroup: "", whatsappChannel: "", tiktok: "", youtube: "", snapchat: "", telegram: "" };
+
+// ── Dates du concours (jour + heure) ────────────────────────────────────────
+// ISO/UTC stocké côté serveur → valeur pour <input type="datetime-local">
+// (heure LOCALE de l'admin, format "YYYY-MM-DDTHH:mm", sans fuseau).
+const toLocalInput = (iso?: string | null) => {
+  if (!iso) return "";
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return "";
+  const off = dt.getTimezoneOffset() * 60000;
+  return new Date(dt.getTime() - off).toISOString().slice(0, 16);
+};
+// Valeur du <input datetime-local> (heure locale) → ISO UTC pour l'API.
+// On envoie l'instant exact : le back fait new Date(iso) sans ambiguïté de fuseau.
+const toISO = (v?: string | null) => {
+  if (!v) return "";
+  const dt = new Date(v);
+  return isNaN(dt.getTime()) ? "" : dt.toISOString();
+};
+// Affichage jour + heure dans la liste des concours.
+const fmtDateTime = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+
+const S = {
+  bg: "#F1F5F9",
+  card: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 20 } as React.CSSProperties,
+  inp: { width: "100%", padding: "12px 14px", border: "1.5px solid #E2E8F0", borderRadius: 12, fontSize: 14, outline: "none", fontFamily: "inherit", background: "#F8FAFF", color: "#0F172A", boxSizing: "border-box" } as React.CSSProperties,
+  lbl: { fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" as const, letterSpacing: "0.08em", display: "block", marginBottom: 6 },
+  pill: (color: string) => ({ padding: "3px 10px", borderRadius: 100, background: color + "18", color, border: `1px solid ${color}30`, fontSize: 11, fontWeight: 700 } as React.CSSProperties),
+};
+
+export default function AdminPage() {
+  const { user, isAuthenticated, logout, hasHydrated } = useAuthStore();
+  const router = useRouter();
+  const [tab, setTab] = useState<Tab>("overview");
+  const [stats, setStats] = useState<any>(null);
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [contests, setContests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [candSearch, setCandSearch] = useState("");
+  const [candFilter, setCandFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
+
+  const [viewingCandidate, setViewingCandidate] = useState<any>(null);
+  const [editingCandidate, setEditingCandidate] = useState<any>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [editValues, setEditValues] = useState({ ...EMPTY_EDIT });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Ajustement manuel des votes (protégé par code de validation)
+  const [voteQty, setVoteQty] = useState("");
+  const [voteCode, setVoteCode] = useState("");
+  const [voteAdjusting, setVoteAdjusting] = useState(false);
+
+  // Ajustement manuel des points (même code de validation que les votes)
+  const [pointQty, setPointQty] = useState("");
+  const [pointCode, setPointCode] = useState("");
+  const [pointAdjusting, setPointAdjusting] = useState(false);
+
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editUserValues, setEditUserValues] = useState({ name: "", email: "", role: "" });
+  const [editUserSaving, setEditUserSaving] = useState(false);
+
+  const [showCreateContest, setShowCreateContest] = useState(false);
+  const [newContest, setNewContest] = useState({ name: "", startDate: "", endDate: "" });
+  const [contestSaving, setContestSaving] = useState(false);
+  const [editingContest, setEditingContest] = useState<any>(null);
+  const [editContestValues, setEditContestValues] = useState({ name: "", startDate: "", endDate: "" });
+  const [editContestSaving, setEditContestSaving] = useState(false);
+
+  const [socialValues, setSocialValues] = useState({ ...EMPTY_SOCIAL });
+  const [socialSaving, setSocialSaving] = useState(false);
+  const [socialLoaded, setSocialLoaded] = useState(false);
+
+  const [doubleVotes, setDoubleVotes] = useState(false);
+  const [doubleSaving, setDoubleSaving] = useState(false);
+
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace("/api", "");
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+    if (!isAuthenticated || user?.role !== "ADMIN") { router.push("/xhrisadmin"); return; }
+    load();
+  }, [hasHydrated, isAuthenticated]);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [s, c, p, u, ct, dv, pc] = await Promise.all([
+        api.get("/admin/stats"),
+        api.get("/admin/candidates?limit=100"),
+        api.get("/admin/payments?limit=50"),
+        api.get("/admin/users?limit=50"),
+        api.get("/admin/contests").catch(() => ({ data: { data: [] } })),
+        api.get("/admin/double-votes").catch(() => ({ data: { data: { enabled: false } } })),
+        api.get("/admin/points/config").catch(() => ({ data: { data: { pointsByRank: null } } })),
+      ]);
+      setStats(s.data.data);
+      setCandidates(c.data.data.candidates || []);
+      setPayments(p.data.data.payments || []);
+      setUsers(u.data.data.users || []);
+      setContests(ct.data.data || []);
+      setDoubleVotes(dv.data?.data?.enabled === true);
+      const scale = pc.data?.data?.pointsByRank;
+      if (Array.isArray(scale) && scale.length > 0) setPointsScale(scale.map(String));
+    } catch { toast.error("Erreur chargement"); }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (tab === "contests" && !socialLoaded) {
+      api.get("/admin/social-links").then(r => {
+        const d = r.data.data || {};
+        setSocialValues({ whatsappGroup: d.whatsappGroup || "", whatsappChannel: d.whatsappChannel || "", tiktok: d.tiktok || "", youtube: d.youtube || "", snapchat: d.snapchat || "", telegram: d.telegram || "" });
+        setSocialLoaded(true);
+      }).catch(() => setSocialLoaded(true));
+    }
+  }, [tab]);
+
+  const approve = async (id: string) => { try { await api.patch(`/admin/candidates/${id}/approve`); toast.success("Approuvé ✓"); load(); } catch { toast.error("Erreur"); } };
+  const reject = async (id: string) => { try { await api.patch(`/admin/candidates/${id}/reject`); toast.success("Rejeté"); load(); } catch { toast.error("Erreur"); } };
+  const del = async (id: string) => { if (!confirm("Supprimer définitivement ?")) return; try { await api.delete(`/admin/candidates/${id}`); toast.success("Supprimé"); load(); } catch { toast.error("Erreur"); } };
+
+  const resetAllVotes = async () => {
+    if (!confirm("⚠️ Remettre TOUS les votes à zéro pour tout le monde ?\nCette action est irréversible.")) return;
+    if (!confirm("Dernière confirmation : tous les votes de tous les candidats seront supprimés.")) return;
+    try {
+      const res = await api.post("/admin/votes/reset", { confirm: true });
+      toast.success(res.data?.message || "Votes réinitialisés ✓");
+      load();
+    } catch { toast.error("Erreur lors de la réinitialisation"); }
+  };
+
+  const toggleDoubleVotes = async () => {
+    const next = !doubleVotes;
+    setDoubleSaving(true);
+    setDoubleVotes(next);
+    try {
+      const res = await api.put("/admin/double-votes", { enabled: next });
+      setDoubleVotes(res.data?.data?.enabled ?? next);
+      toast.success(res.data?.message || (next ? "Votes doubles activés ✓" : "Votes doubles désactivés"));
+    } catch {
+      setDoubleVotes(!next);
+      toast.error("Erreur");
+    } finally {
+      setDoubleSaving(false);
+    }
+  };
+
+  const openEdit = (c: any) => {
+    setIsCreating(false); setEditingCandidate(c);
+    setEditValues({ name: c.name||"", city: c.city||"", age: String(c.age||""), bio: c.bio||"", type: c.type||"MISS", status: c.status||"PENDING", instagram: c.instagram||"", tiktok: c.tiktok||"", snap: c.snap||"", whatsappFan: c.whatsappFan||"", phone: c.phone||"", email: c.email||"" });
+    setPhotoFile(null);
+    setPhotoPreview(c.photoUrl?.startsWith("http") ? c.photoUrl : `${apiBase}${c.photoUrl}`);
+    setVoteQty(""); setVoteCode("");
+    setPointQty(""); setPointCode("");
+  };
+
+  // Ajout/retrait manuel de votes — exige le code de validation (vérifié côté serveur)
+  const adjustVotes = async (sign: 1 | -1) => {
+    const qty = parseInt(voteQty, 10);
+    if (!Number.isInteger(qty) || qty <= 0) { toast.error("Entrez un nombre de votes valide"); return; }
+    if (!voteCode.trim()) { toast.error("Code de validation requis"); return; }
+    setVoteAdjusting(true);
+    try {
+      const res = await api.patch(`/admin/candidates/${editingCandidate.id}/votes`, {
+        delta: sign * qty,
+        code: voteCode.trim(),
+      });
+      const updated = res.data?.data;
+      toast.success(res.data?.message || "Votes ajustés ✓");
+      if (updated && typeof updated.totalVotes === "number") {
+        setEditingCandidate({ ...editingCandidate, totalVotes: updated.totalVotes });
+        setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? { ...c, totalVotes: updated.totalVotes } : c));
+      }
+      setVoteQty("");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Erreur — code invalide ou serveur indisponible");
+    }
+    setVoteAdjusting(false);
+  };
+  // Ajout/retrait manuel de points — exige le même code de validation (vérifié côté serveur)
+  const adjustPoints = async (sign: 1 | -1) => {
+    const qty = parseInt(pointQty, 10);
+    if (!Number.isInteger(qty) || qty <= 0) { toast.error("Entrez un nombre de points valide"); return; }
+    if (!pointCode.trim()) { toast.error("Code de validation requis"); return; }
+    setPointAdjusting(true);
+    try {
+      const res = await api.patch(`/admin/candidates/${editingCandidate.id}/points`, {
+        delta: sign * qty,
+        code: pointCode.trim(),
+      });
+      const updated = res.data?.data;
+      toast.success(res.data?.message || "Points ajustés ✓");
+      if (updated && typeof updated.points === "number") {
+        setEditingCandidate({ ...editingCandidate, points: updated.points });
+        setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? { ...c, points: updated.points } : c));
+      }
+      setPointQty("");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Erreur — code invalide ou serveur indisponible");
+    }
+    setPointAdjusting(false);
+  };
+
+  const openCreate = () => { setIsCreating(true); setEditingCandidate({}); setEditValues({ ...EMPTY_EDIT }); setPhotoFile(null); setPhotoPreview(null); };
+
+  const saveCandidate = async () => {
+    if (isCreating && !photoFile) { toast.error("Photo obligatoire"); return; }
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      Object.entries(editValues).forEach(([k, v]) => {
+        if (isCreating) {
+          if (v) fd.append(k, v);
+        } else {
+          fd.append(k, v ?? "");
+        }
+      });
+      if (photoFile) fd.append("photo", photoFile);
+      if (isCreating) { await api.post("/admin/candidates", fd, { headers: { "Content-Type": "multipart/form-data" } }); toast.success("Candidat ajouté ✓"); }
+      else { await api.patch(`/admin/candidates/${editingCandidate.id}`, fd, { headers: { "Content-Type": "multipart/form-data" } }); toast.success("Mis à jour ✓"); }
+      setEditingCandidate(null); load();
+    } catch { toast.error("Erreur d'enregistrement"); }
+    setSaving(false);
+  };
+
+  const saveSocial = async () => {
+    setSocialSaving(true);
+    try {
+      await api.put("/admin/social-links", socialValues);
+      toast.success("Réseaux sociaux mis à jour ✓");
+    } catch { toast.error("Erreur de sauvegarde"); }
+    setSocialSaving(false);
+  };
+
+  const statusColor: Record<string, string> = { APPROVED: "#10B981", PENDING: "#F59E0B", REJECTED: "#EF4444", COMPLETED: "#10B981", FAILED: "#EF4444", REFUNDED: "#EF4444", OPEN: "#10B981", CLOSED: "#64748B" };
+  const sc = (s: string) => statusColor[s] || "#64748B";
+
+  const [exportingTx, setExportingTx] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+  const [awardingPoints, setAwardingPoints] = useState(false);
+
+  // Barème des points quotidiens (modifiable chaque jour par l'admin)
+  const DEFAULT_SCALE = ["100", "90", "80", "70", "60", "50", "40", "30", "20", "10"];
+  const [pointsScale, setPointsScale] = useState<string[]>([...DEFAULT_SCALE]);
+  const [pointsScaleSaving, setPointsScaleSaving] = useState(false);
+
+  // Attribution manuelle des points du jour (filet de secours si le cron de 21h
+  // a échoué). Idempotent côté serveur : un seul passage par jour.
+  const awardPoints = async () => {
+    if (!confirm(`Attribuer les points du classement du jour selon le barème configuré (1er = ${pointsScale[0] || "?"} pts) et remettre les votes à zéro ?\n\nNormalement automatique à 21h. À ne lancer manuellement que si le cron a échoué.`)) return;
+    setAwardingPoints(true);
+    try {
+      const res = await api.post("/admin/points/award", {}, { timeout: 60000 });
+      toast.success(res.data?.message || "Points attribués ✓", { duration: 6000 });
+      load();
+    } catch (err: any) {
+      const status = err?.response?.status;
+      toast.error(err?.response?.data?.message || (status === 404 ? "Route absente (404) — backend non déployé" : "Erreur lors de l'attribution des points"), { duration: 7000 });
+    }
+    setAwardingPoints(false);
+  };
+  // Enregistre le barème du jour (ex. 1er = 300 aujourd'hui, 100 demain) :
+  // l'attribution de 21h utilisera le barème enregistré à ce moment-là.
+  const savePointsScale = async () => {
+    const nums = pointsScale.map(v => parseInt(String(v).trim(), 10));
+    if (nums.some(n => !Number.isInteger(n) || n < 0)) {
+      toast.error("Le barème ne doit contenir que des entiers ≥ 0");
+      return;
+    }
+    setPointsScaleSaving(true);
+    try {
+      const res = await api.put("/admin/points/config", { pointsByRank: nums });
+      const arr = res.data?.data?.pointsByRank;
+      if (Array.isArray(arr)) setPointsScale(arr.map(String));
+      toast.success(res.data?.message || "Barème enregistré ✓", { duration: 5000 });
+    } catch (err: any) {
+      const status = err?.response?.status;
+      toast.error(err?.response?.data?.message || (status === 404 ? "Route absente (404) — backend non déployé" : "Erreur lors de l'enregistrement du barème"), { duration: 6000 });
+    }
+    setPointsScaleSaving(false);
+  };
+
+  const candidateNameById: Record<string, string> = Object.fromEntries(candidates.map((c: any) => [c.id, c.name]));
+
+  // Re-vérifie auprès des fournisseurs les paiements en attente et crédite les
+  // votes des transactions confirmées mais non créditées (webhook manqué).
+  const reconcilePayments = async () => {
+    setReconciling(true);
+    try {
+      // Opération par lots (vérifie chaque paiement auprès du fournisseur) :
+      // on laisse jusqu'à 2 min, bien au-delà du timeout global de 15 s.
+      const res = await api.post("/admin/payments/reconcile", {}, { timeout: 120000 });
+      const s = res.data?.data;
+      toast.success(res.data?.message || "Transactions synchronisées ✓", { duration: 6000 });
+      if (s && s.credited > 0) load(); // rafraîchit stats + paiements si des votes ont été crédités
+    } catch (err: any) {
+      // Message précis : code HTTP / timeout / cause probable.
+      const status = err?.response?.status;
+      const apiMsg = err?.response?.data?.message;
+      const isTimeout = err?.code === "ECONNABORTED" || /timeout/i.test(err?.message || "");
+      let msg: string;
+      if (apiMsg) msg = apiMsg;
+      else if (isTimeout) msg = "Vérification trop longue — relance (elle traite les paiements par lots)";
+      else if (status === 404) msg = "Route absente (404) — backend non déployé/redémarré";
+      else if (status === 401 || status === 403) msg = "Non autorisé — reconnecte-toi en admin";
+      else if (status === 500) msg = "Erreur serveur (500) — voir les logs du backend";
+      else if (!err?.response) msg = "Serveur injoignable (réseau/CORS)";
+      else msg = `Erreur ${status || ""} lors de la synchronisation`;
+      toast.error(msg, { duration: 7000 });
+    }
+    setReconciling(false);
+  };
+
+  const handleCandidatePdf = async (c: any) => {
+    try { await downloadCandidatePdf(c, apiBase); toast.success("PDF généré ✓"); }
+    catch { toast.error("Erreur lors de la génération du PDF"); }
+  };
+
+  const handleTransactionsPdf = async () => {
+    setExportingTx(true);
+    try {
+      const res = await api.get("/admin/payments?limit=10000");
+      const all = res.data?.data?.payments?.length ? res.data.data.payments : payments;
+      await downloadTransactionsPdf(all, candidateNameById);
+      toast.success("PDF des transactions généré ✓");
+    } catch { toast.error("Erreur lors de l'export PDF"); }
+    setExportingTx(false);
+  };
+
+  const cell = (label: string, value: any) => (
+    <div>
+      <div style={{ color: "#94A3B8", fontWeight: 700, fontSize: 10.5, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
+      <div style={{ color: "#0F172A", fontWeight: 600, marginTop: 2, wordBreak: "break-word", fontSize: 12.5 }}>{value === null || value === undefined || value === "" ? "—" : value}</div>
+    </div>
+  );
+
+  const navItems: { key: Tab; Icon: LucideIcon; label: string }[] = [
+    { key: "overview", Icon: LayoutDashboard, label: "Tableau de bord" },
+    { key: "candidates", Icon: Users, label: "Candidats" },
+    { key: "payments", Icon: CreditCard, label: "Paiements" },
+    { key: "contests", Icon: Trophy, label: "Concours & Réseaux" },
+    { key: "users", Icon: User, label: "Utilisateurs" },
+  ];
+
+  const SidebarContent = () => (
+    <>
+      {/* Brand */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "2px 6px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <div style={{ width: 42, height: 42, borderRadius: 13, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", display: "grid", placeItems: "center", flexShrink: 0, boxShadow: "0 6px 16px rgba(37,99,235,0.4)" }}>
+          <LayoutDashboard size={18} color="#fff" />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 14.5, fontWeight: 800, color: "#F8FAFC", letterSpacing: "-0.01em" }}>Reines du Meta <span style={{ color: "#60A5FA" }}>Admin</span></div>
+          <div style={{ fontSize: 11.5, color: "#64748B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.name || "Administrateur"}</div>
+        </div>
+      </div>
+
+      <div style={{ fontSize: 10, fontWeight: 800, color: "#475569", letterSpacing: "0.16em", textTransform: "uppercase", padding: "2px 8px" }}>Menu</div>
+      <nav style={{ display: "grid", gap: 3 }}>
+        {navItems.map(({ key, Icon, label }) => {
+          const active = tab === key;
+          const pending = key === "candidates" ? (stats?.pendingCandidates || 0) : 0;
+          return (
+            <button key={key} onClick={() => { setTab(key); setSidebarOpen(false); }} style={{ position: "relative", width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", borderRadius: 11, border: "none", cursor: "pointer", background: active ? "linear-gradient(90deg, rgba(37,99,235,0.28), rgba(37,99,235,0.08))" : "transparent", color: active ? "#fff" : "#94A3B8", fontWeight: active ? 700 : 500, fontSize: 13.5, textAlign: "left", fontFamily: "inherit", transition: "background 0.18s, color 0.18s" }}>
+              {active && <span style={{ position: "absolute", left: -18, top: "22%", bottom: "22%", width: 3.5, borderRadius: 100, background: "#3B82F6" }} />}
+              <Icon size={16} color={active ? "#60A5FA" : "#64748B"} /> {label}
+              {pending > 0 && (
+                <span style={{ marginLeft: "auto", background: "#F59E0B", color: "#0F172A", fontSize: 10.5, fontWeight: 800, borderRadius: 100, padding: "2px 8px" }}>{pending}</span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div style={{ marginTop: "auto", display: "grid", gap: 6, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 13px", borderRadius: 11, background: "rgba(255,255,255,0.04)", color: "#94A3B8", textDecoration: "none", fontSize: 13, fontWeight: 600 }}>← Retour au site</Link>
+        <button onClick={() => { logout(); router.push("/"); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 13px", borderRadius: 11, background: "rgba(239,68,68,0.12)", color: "#F87171", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, width: "100%", fontFamily: "inherit" }}>
+          <LogOut size={14} /> Déconnexion
+        </button>
+      </div>
+    </>
+  );
+
+  const statCards = stats ? [
+    { Icon: Users, val: stats.totalUsers, label: "Utilisateurs", color: "#2563EB" },
+    { Icon: CheckCircle2, val: (stats.totalVotes||0).toLocaleString("fr-FR"), label: "Votes validés", color: "#10B981" },
+    { Icon: XCircle, val: stats.pendingCandidates, label: "Candidatures en attente", color: "#F59E0B" },
+    { Icon: CreditCard, val: stats.completedPayments, label: "Paiements complétés", color: "#2563EB" },
+    { Icon: LayoutDashboard, val: stats.totalCandidates, label: "Candidats approuvés", color: "#8B5CF6" },
+    { Icon: Trophy, val: (stats.revenue || 0).toLocaleString("fr-FR") + " FCFA", label: "Revenus totaux", color: "#10B981" },
+  ] : [];
+
+  return (
+    // min-height compense le zoom 0.84 du body pour couvrir tout l'écran
+    <div style={{ display: "flex", minHeight: "calc(100vh / 0.84)", background: S.bg, fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+
+      <aside className="admin-desktop-sidebar" style={{ display: "none", flexDirection: "column", gap: 14, position: "fixed", top: 0, left: 0, bottom: 0, width: 260, background: "#0B1226", borderRight: "1px solid #16213D", padding: "24px 18px", zIndex: 50 }}>
+        <SidebarContent />
+      </aside>
+
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", zIndex: 60, backdropFilter: "blur(4px)" }} />}
+      <aside style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 272, background: "#0B1226", borderRight: "1px solid #16213D", padding: "24px 18px", zIndex: 70, display: "flex", flexDirection: "column", gap: 14, transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform .28s cubic-bezier(0.22,1,0.36,1)", boxShadow: sidebarOpen ? "0 0 60px rgba(0,0,0,0.4)" : "none" }}>
+        <SidebarContent />
+      </aside>
+
+      <main className="admin-main-content" style={{ flex: 1, minHeight: "100vh", padding: "20px 20px 60px" }}>
+       <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24, padding: "10px 0" }}>
+          <button className="admin-menu-btn" onClick={() => setSidebarOpen(true)} style={{ width: 42, height: 42, borderRadius: 13, border: "1px solid #E2E8F0", background: "#fff", display: "grid", placeItems: "center", cursor: "pointer", boxShadow: "0 1px 3px rgba(15,23,42,0.06)" }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>
+              Administration · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+            </div>
+            <h1 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: "#0F172A", letterSpacing: "-0.02em" }}>{navItems.find(n=>n.key===tab)?.label}</h1>
+          </div>
+          {tab === "candidates" && (
+            <button onClick={openCreate} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 13, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13.5, boxShadow: "0 4px 16px #2563EB35", fontFamily: "inherit" }}>
+              <Plus size={16} /> Ajouter
+            </button>
+          )}
+          <button onClick={load} title="Actualiser" style={{ width: 42, height: 42, borderRadius: 13, border: "1px solid #E2E8F0", background: "#fff", color: "#64748B", cursor: "pointer", fontSize: 17, display: "grid", placeItems: "center", boxShadow: "0 1px 3px rgba(15,23,42,0.06)" }}>↺</button>
+        </div>
+
+        {loading ? (
+          <div style={{ minHeight: 320, display: "grid", placeItems: "center" }}><div className="spinner" /></div>
+        ) : (<>
+
+          {tab === "overview" && (
+            <>
+              <div className="admin-stats">
+                {statCards.map(card => (
+                  <div key={card.label} className="admin-stat-c" style={{ ...S.card }}>
+                    <div className="ic" style={{ background: card.color + "18" }}>
+                      <card.Icon size={17} color={card.color} />
+                    </div>
+                    <div className="v">{card.val}</div>
+                    <div className="l">{card.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", borderColor: doubleVotes ? "#10B98155" : "#E2E8F0", background: doubleVotes ? "#F0FDF4" : "#fff" }}>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+                    ⚡ Votes doubles
+                    {doubleVotes && <span style={S.pill("#10B981")}>ACTIF</span>}
+                  </div>
+                  <p style={{ color: "#64748B", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+                    Quand activé, chaque vote payé compte <strong>×2</strong> pour le candidat
+                    (le prix payé ne change pas). S'applique aux votes lancés pendant que l'option est active.
+                  </p>
+                </div>
+                <button
+                  onClick={toggleDoubleVotes}
+                  disabled={doubleSaving}
+                  role="switch"
+                  aria-checked={doubleVotes}
+                  title={doubleVotes ? "Désactiver" : "Activer"}
+                  style={{ position: "relative", width: 58, height: 32, borderRadius: 100, border: "none", cursor: doubleSaving ? "wait" : "pointer", background: doubleVotes ? "#10B981" : "#CBD5E1", transition: "background .2s", flexShrink: 0, opacity: doubleSaving ? 0.6 : 1 }}
+                >
+                  <span style={{ position: "absolute", top: 3, left: doubleVotes ? 29 : 3, width: 26, height: 26, borderRadius: "50%", background: "#fff", transition: "left .2s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }} />
+                </button>
+              </div>
+
+              {/* Points quotidiens (attribution auto à 21h, bouton = secours) */}
+              <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", borderColor: "#FDE68A", background: "#FFFBEB" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+                      ⭐ Points du jour
+                      <span style={{ ...S.pill("#F59E0B") }}>AUTO 21h</span>
+                    </div>
+                    <p style={{ color: "#92400E", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+                      Chaque soir à <strong>21h00 (Cameroun)</strong>, le top 10 du classement reçoit les points
+                      du <strong>barème ci-dessous</strong>, puis les votes sont remis à zéro pour la manche suivante.
+                      Ce bouton n'est utile que si l'attribution automatique a échoué.
+                    </p>
+                  </div>
+                  <button onClick={awardPoints} disabled={awardingPoints} style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 14, background: awardingPoints ? "#FCD34D" : "#F59E0B", color: "#fff", border: "none", cursor: awardingPoints ? "wait" : "pointer", fontWeight: 800, fontSize: 14, boxShadow: "0 4px 16px rgba(245,158,11,0.3)", fontFamily: "inherit", flexShrink: 0 }}>
+                    <Trophy size={16} /> {awardingPoints ? "Attribution..." : "Attribuer maintenant"}
+                  </button>
+                </div>
+
+                {/* Barème modifiable : points par rang, appliqué à la prochaine attribution */}
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1.5px dashed #FDE68A" }}>
+                  <div style={{ fontWeight: 800, color: "#92400E", fontSize: 13.5, marginBottom: 10 }}>
+                    🏆 Barème du jour — points gagnés par rang (modifiable chaque jour)
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(86px, 1fr))", gap: 8 }}>
+                    {pointsScale.map((v, i) => (
+                      <div key={i} style={{ display: "grid", gap: 3 }}>
+                        <label style={{ fontSize: 11, fontWeight: 800, color: "#B45309", textAlign: "center" }}>
+                          {i === 0 ? "1er" : `${i + 1}e`}
+                        </label>
+                        <input
+                          type="number" min={0} value={v}
+                          onChange={e => setPointsScale(prev => prev.map((p, j) => j === i ? e.target.value : p))}
+                          style={{ padding: "9px 6px", borderRadius: 10, border: "1.5px solid #FDE68A", background: "#fff", fontSize: 13.5, fontWeight: 800, textAlign: "center", color: "#0F172A", fontFamily: "inherit", width: "100%" }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
+                    <button
+                      onClick={savePointsScale}
+                      disabled={pointsScaleSaving}
+                      style={{ padding: "10px 18px", borderRadius: 12, border: "none", cursor: pointsScaleSaving ? "wait" : "pointer", fontWeight: 800, fontSize: 13.5, fontFamily: "inherit", background: pointsScaleSaving ? "#FCD34D" : "#D97706", color: "#fff" }}
+                    >
+                      {pointsScaleSaving ? "Enregistrement..." : "💾 Enregistrer le barème"}
+                    </button>
+                    <button
+                      onClick={() => setPointsScale([...DEFAULT_SCALE])}
+                      style={{ padding: "10px 14px", borderRadius: 12, border: "1.5px solid #FDE68A", cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: "inherit", background: "#fff", color: "#92400E" }}
+                    >
+                      Rétablir 100 → 10
+                    </button>
+                    <span style={{ fontSize: 11.5, color: "#92400E" }}>
+                      Ex. : mettez 300 pour le 1er aujourd'hui, revenez demain mettre 100 — l'attribution de 21h utilise le barème enregistré.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ ...S.card, marginTop: 20, padding: "20px 22px", borderColor: "#FECACA", background: "#FFFCFC" }}>
+                <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15, marginBottom: 4 }}>⚠️ Zone dangereuse</div>
+                <p style={{ color: "#94A3B8", fontSize: 13, margin: "0 0 16px", lineHeight: 1.5 }}>
+                  Remet le compteur de votes de <strong>tous les candidats</strong> à zéro et supprime tous les votes.
+                  Les paiements (historique) sont conservés. <strong style={{ color: "#EF4444" }}>Action irréversible.</strong>
+                </p>
+                <button onClick={resetAllVotes} style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 20px", borderRadius: 14, background: "#EF4444", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px #EF444430", fontFamily: "inherit" }}>
+                  <Trash2 size={16} /> Réinitialiser tous les votes
+                </button>
+              </div>
+            </>
+          )}
+
+          {tab === "candidates" && (() => {
+            const q = candSearch.trim().toLowerCase();
+            const shown = candidates.filter(c =>
+              (candFilter === "ALL" || c.status === candFilter) &&
+              (!q || c.name?.toLowerCase().includes(q) || c.city?.toLowerCase().includes(q)),
+            );
+            const statusLabel: Record<string, string> = { APPROVED: "Approuvé", PENDING: "En attente", REJECTED: "Rejeté" };
+            const countOf = (s: string) => candidates.filter(c => c.status === s).length;
+            const filters: { k: typeof candFilter; label: string; count: number; color: string }[] = [
+              { k: "ALL", label: "Tous", count: candidates.length, color: "#0F172A" },
+              { k: "PENDING", label: "En attente", count: countOf("PENDING"), color: "#F59E0B" },
+              { k: "APPROVED", label: "Approuvés", count: countOf("APPROVED"), color: "#10B981" },
+              { k: "REJECTED", label: "Rejetés", count: countOf("REJECTED"), color: "#EF4444" },
+            ];
+            return (
+            <div style={{ display: "grid", gap: 12 }}>
+              {/* Barre de recherche + compteur */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 220, display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #E2E8F0", borderRadius: 13, padding: "11px 14px", boxShadow: "0 1px 3px rgba(15,23,42,0.05)" }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                  <input value={candSearch} onChange={e => setCandSearch(e.target.value)} placeholder="Rechercher par nom ou ville..." style={{ flex: 1, border: "none", outline: "none", background: "none", fontSize: 13.5, color: "#0F172A", fontFamily: "inherit" }} />
+                </div>
+                <div style={{ fontSize: 12.5, color: "#64748B", fontWeight: 600 }}>
+                  {shown.length}/{candidates.length} candidat{candidates.length > 1 ? "s" : ""}
+                </div>
+              </div>
+
+              {/* Filtres par statut */}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {filters.map(f => {
+                  const active = candFilter === f.k;
+                  return (
+                    <button
+                      key={f.k}
+                      onClick={() => setCandFilter(f.k)}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 7,
+                        padding: "8px 14px", borderRadius: 100, cursor: "pointer",
+                        fontFamily: "inherit", fontSize: 12.5, fontWeight: 700,
+                        border: `1.5px solid ${active ? f.color : "#E2E8F0"}`,
+                        background: active ? f.color : "#fff",
+                        color: active ? "#fff" : "#64748B",
+                        boxShadow: active ? `0 4px 14px ${f.color}40` : "0 1px 3px rgba(15,23,42,0.05)",
+                        transition: "all 0.18s ease",
+                      }}
+                    >
+                      {f.label}
+                      <span style={{
+                        fontSize: 11, fontWeight: 800, borderRadius: 100, padding: "1px 7px",
+                        background: active ? "rgba(255,255,255,0.25)" : f.color + "18",
+                        color: active ? "#fff" : f.color,
+                      }}>{f.count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {shown.length === 0 && (
+                <div style={{ ...S.card, padding: "48px 24px", textAlign: "center", border: "2px dashed #E2E8F0" }}>
+                  <Users size={40} color="#CBD5E1" style={{ margin: "0 auto 16px" }} />
+                  <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 15 }}>
+                    {q || candFilter !== "ALL" ? "Aucun candidat ne correspond à ce filtre" : "Aucun candidat"}
+                  </div>
+                </div>
+              )}
+
+              {shown.map((c) => {
+                const photo = c.photoUrl?.startsWith("http") ? c.photoUrl : `${apiBase}${c.photoUrl}`;
+                const rank = candidates.indexOf(c) + 1;
+                return (
+                  <div key={c.id} className="acand-row" style={{ ...S.card }}>
+                    <div className="acand-main" onClick={() => setViewingCandidate(c)}>
+                      <div className="acand-photo">
+                        <Image src={photo} alt={c.name} fill style={{ objectFit: "cover" }} onError={(e: any) => { e.target.style.display = "none"; }} />
+                      </div>
+                      <div className="acand-info">
+                        <div className="acand-top">
+                          <span className="acand-rank">#{String(rank).padStart(2, "0")}</span>
+                          <span style={S.pill(sc(c.status))}>{statusLabel[c.status] || c.status}</span>
+                        </div>
+                        <div className="acand-name">{c.name}</div>
+                        <div className="acand-sub">{c.city || "—"}{c.age ? ` · ${c.age} ans` : ""}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 7, flexWrap: "wrap" }}>
+                          <span className="acand-votes" style={{ marginTop: 0 }}>
+                            <Trophy size={13} color="#F59E0B" /> {(c.totalVotes ?? 0).toLocaleString("fr-FR")} votes
+                          </span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.78rem", fontWeight: 800, color: "#B45309", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 100, padding: "1px 9px" }} title="Points cumulés">
+                            ⭐ {(c.points ?? 0)} pts
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="acand-actions">
+                      <button onClick={() => openEdit(c)} title="Modifier"><Edit3 size={16} color="#2563EB" /></button>
+                      {c.status === "PENDING"
+                        ? <button onClick={() => approve(c.id)} title="Approuver"><CheckCircle2 size={16} color="#10B981" /></button>
+                        : <button onClick={() => handleCandidatePdf(c)} title="Fiche PDF"><FileDown size={16} color="#2563EB" /></button>}
+                      <button onClick={() => del(c.id)} title="Supprimer"><Trash2 size={16} color="#EF4444" /></button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            );
+          })()}
+
+          {tab === "payments" && (
+            <div style={{ display: "grid", gap: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                <div style={{ fontSize: 13, color: "#64748B" }}>
+                  <strong style={{ color: "#0F172A" }}>{payments.length}</strong> transaction(s) ·{" "}
+                  <strong style={{ color: "#10B981" }}>{payments.filter(p => p.status === "COMPLETED").length}</strong> complétée(s) ·{" "}
+                  Revenus : <strong style={{ color: "#0F172A" }}>{payments.filter(p => p.status === "COMPLETED").reduce((s, p) => s + (p.amount || 0), 0).toLocaleString("fr-FR")} FCFA</strong>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <button onClick={reconcilePayments} disabled={reconciling} title="Re-vérifie les paiements en attente auprès des fournisseurs et crédite les votes confirmés mais manquants" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 14, background: reconciling ? "#94A3B8" : "#10B981", color: "#fff", border: "none", cursor: reconciling ? "wait" : "pointer", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px rgba(16,185,129,0.25)", fontFamily: "inherit" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={reconciling ? { animation: "spin 1s linear infinite" } : undefined}><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" /></svg>
+                    {reconciling ? "Vérification..." : "Re-vérifier les transactions"}
+                  </button>
+                  <button onClick={handleTransactionsPdf} disabled={exportingTx} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px #2563EB30", opacity: exportingTx ? 0.6 : 1, fontFamily: "inherit" }}>
+                    <FileDown size={16} /> {exportingTx ? "Génération..." : "Télécharger PDF (toutes)"}
+                  </button>
+                </div>
+              </div>
+
+              {payments.length === 0 ? (
+                <div style={{ ...S.card, padding: "48px 24px", textAlign: "center", border: "2px dashed #E2E8F0" }}>
+                  <CreditCard size={40} color="#CBD5E1" style={{ margin: "0 auto 16px" }} />
+                  <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 15 }}>Aucune transaction</div>
+                </div>
+              ) : payments.map(p => {
+                const candName = p.candidateName || candidateNameById[p.candidateId] || "—";
+                const phone = p.user?.phone || p.metadata?.phone || p.metadata?.phone_number || "—";
+                return (
+                  <div key={p.id} style={{ ...S.card, padding: "16px 20px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, alignItems: "flex-start" }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 14 }}>{p.user?.name || "—"}</div>
+                        <div style={{ fontSize: 13, color: "#94A3B8", marginTop: 2 }}>{p.user?.email || "—"}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontWeight: 800, color: "#2563EB", fontSize: 16 }}>{(p.amount || 0).toLocaleString("fr-FR")} FCFA</div>
+                        <span style={{ ...S.pill(sc(p.status)), display: "inline-block", marginTop: 4 }}>{p.status}</span>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #F1F5F9", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 12 }}>
+                      {cell("N° payeur", phone)}
+                      {cell("Candidat", candName)}
+                      {cell("Votes", p.votesCount)}
+                      {cell("Date", new Date(p.createdAt).toLocaleString("fr-FR"))}
+                      {cell("Référence", p.flutterwaveTxRef)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {tab === "contests" && (
+            <div style={{ display: "grid", gap: 24 }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 17 }}>🏆 Concours</div>
+                    <div style={{ color: "#94A3B8", fontSize: 13, marginTop: 2 }}>{contests.length} concours enregistré{contests.length > 1 ? "s" : ""}</div>
+                  </div>
+                  <button onClick={() => setShowCreateContest(true)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
+                    <Plus size={16} /> Nouveau concours
+                  </button>
+                </div>
+                {contests.length === 0 ? (
+                  <div style={{ ...S.card, padding: "48px 24px", textAlign: "center", border: "2px dashed #E2E8F0" }}>
+                    <Trophy size={40} color="#CBD5E1" style={{ margin: "0 auto 16px" }} />
+                    <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 15 }}>Aucun concours créé</div>
+                    <p style={{ color: "#94A3B8", fontSize: 13, marginTop: 8 }}>Créez votre premier concours pour activer les votes.</p>
+                  </div>
+                ) : contests.map((ct: any) => {
+                  const isOpen = ct.status === "OPEN";
+                  return (
+                    <div key={ct.id} style={{ ...S.card, padding: "20px 22px", position: "relative", overflow: "hidden", marginBottom: 10, borderColor: isOpen ? "#10B98130" : "#E2E8F0" }}>
+                      {isOpen && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg,#10B981,#34D399)" }} />}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                            <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 15 }}>{ct.name}</div>
+                            <span style={S.pill(isOpen?"#10B981":"#64748B")}>{isOpen ? "● OUVERT" : "● FERMÉ"}</span>
+                          </div>
+                          <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 16, fontSize: 13 }}>
+                            <span><span style={{ color: "#94A3B8" }}>Début : </span><strong>{ct.startDate ? fmtDateTime(ct.startDate) : "—"}</strong></span>
+                            <span><span style={{ color: "#94A3B8" }}>Fin : </span><strong>{ct.endDate ? fmtDateTime(ct.endDate) : "Indéfinie"}</strong></span>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <button onClick={() => { setEditingContest(ct); setEditContestValues({ name: ct.name, startDate: toLocalInput(ct.startDate), endDate: toLocalInput(ct.endDate) }); }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #2563EB30", background: "#2563EB10", color: "#2563EB", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>✏️ Modifier</button>
+                          {isOpen
+                            ? <button onClick={async () => { if (!confirm("Fermer ce concours ?")) return; try { await api.patch(`/admin/contest/${ct.id}/close`); toast.success("Concours fermé"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #EF444430", background: "#EF444410", color: "#EF4444", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Fermer</button>
+                            : <button onClick={async () => { try { await api.patch(`/admin/contest/${ct.id}/open`); toast.success("Concours ouvert ✓"); load(); } catch { toast.error("Erreur"); } }} style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid #10B98130", background: "#10B98110", color: "#10B981", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>Ouvrir</button>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ ...S.card, padding: "24px 22px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                  <Globe size={20} color="#2563EB" />
+                  <div style={{ fontWeight: 800, color: "#0F172A", fontSize: 17 }}>Réseaux sociaux</div>
+                </div>
+                <p style={{ fontSize: 13, color: "#94A3B8", marginBottom: 20 }}>Ces liens seront affichés sur la page Support pour les visiteurs.</p>
+                <div style={{ display: "grid", gap: 14 }}>
+                  {[
+                    { key: "whatsappGroup", label: "WhatsApp — Groupe", placeholder: "https://chat.whatsapp.com/...", emoji: "💬" },
+                    { key: "whatsappChannel", label: "WhatsApp — Chaîne", placeholder: "https://whatsapp.com/channel/...", emoji: "📢" },
+                    { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@...", emoji: "🎵" },
+                    { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/...", emoji: "▶️" },
+                    { key: "snapchat", label: "Snapchat", placeholder: "https://snapchat.com/add/...", emoji: "👻" },
+                    { key: "telegram", label: "Telegram", placeholder: "https://t.me/...", emoji: "✈️" },
+                  ].map(field => (
+                    <div key={field.key}>
+                      <label style={S.lbl}>{field.emoji} {field.label}</label>
+                      <input type="url" value={(socialValues as any)[field.key]} onChange={e => setSocialValues({ ...socialValues, [field.key]: e.target.value })} placeholder={field.placeholder} style={S.inp} />
+                    </div>
+                  ))}
+                  <button onClick={saveSocial} disabled={socialSaving} style={{ marginTop: 4, padding: "13px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: socialSaving ? 0.7 : 1, fontFamily: "inherit" }}>
+                    {socialSaving ? "Enregistrement..." : "✓ Enregistrer les réseaux"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tab === "users" && (
+            <div style={{ display: "grid", gap: 10 }}>
+              {users.map(u => (
+                <div key={u.id} style={{ ...S.card, padding: "14px 18px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 14 }}>{u.name}</div>
+                      <div style={{ fontSize: 13, color: "#94A3B8", marginTop: 2 }}>{u.email}</div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
+                        <span style={S.pill(u.role==="ADMIN"?"#EF4444":"#2563EB")}>{u.role}</span>
+                        <span style={{ fontSize: 12, color: "#94A3B8" }}>{new Date(u.createdAt).toLocaleDateString("fr-FR")}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#2563EB" }}>🗳 {u.totalVotes ?? u._count?.votes ?? 0} votes</span>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { setEditingUser(u); setEditUserValues({ name: u.name||"", email: u.email||"", role: u.role||"USER" }); }} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #E2E8F0", background: "#F8FAFF", cursor: "pointer", display: "grid", placeItems: "center" }}><Edit3 size={15} color="#2563EB" /></button>
+                      <button onClick={async () => { if (!confirm(`Supprimer ${u.name} ?`)) return; try { await api.delete(`/admin/users/${u.id}`); toast.success("Supprimé"); load(); } catch { toast.error("Erreur"); } }} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #FEE2E2", background: "#FFF5F5", cursor: "pointer", display: "grid", placeItems: "center" }}><Trash2 size={15} color="#EF4444" /></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>)}
+       </div>
+      </main>
+
+      {viewingCandidate && (
+        <div className="amodal-backdrop" onClick={() => setViewingCandidate(null)}>
+          <div className="amodal" onClick={e => e.stopPropagation()}>
+            <div className="amodal-head">
+              <h3>Fiche candidat</h3>
+              <button className="amodal-close" onClick={() => setViewingCandidate(null)}>×</button>
+            </div>
+            <div className="amodal-body">
+            <div style={{ width: "100%", height: 180, borderRadius: 14, overflow: "hidden", background: "#EFF6FF", marginBottom: 16, position: "relative" }}>
+              <Image src={viewingCandidate.photoUrl?.startsWith("http") ? viewingCandidate.photoUrl : `${apiBase}${viewingCandidate.photoUrl}`} alt={viewingCandidate.name} fill style={{ objectFit: "cover" }} onError={(e:any)=>{e.target.style.display="none";}} />
+            </div>
+            {[
+              ["Nom", viewingCandidate.name],
+              ["Email", viewingCandidate.email || "—"],
+              ["Téléphone", viewingCandidate.phone || "—"],
+              ["Type", viewingCandidate.type],
+              ["Statut", viewingCandidate.status],
+              ["Âge", viewingCandidate.age ? viewingCandidate.age + " ans" : "—"],
+              ["Ville", viewingCandidate.city],
+              ["Votes", viewingCandidate.totalVotes],
+              ["Points", `⭐ ${viewingCandidate.points ?? 0}`],
+              ["Bio", viewingCandidate.bio || "—"],
+              ["Instagram", viewingCandidate.instagram || "—"],
+              ["TikTok", viewingCandidate.tiktok || "—"],
+              ["Snapchat", viewingCandidate.snap || "—"],
+            ].map(([label, value]) => (
+              <div key={String(label)} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid #F1F5F9", fontSize: "0.82rem" }}>
+                <span style={{ color: "#94A3B8", fontWeight: 500 }}>{label}</span>
+                <span style={{ color: "#0F172A", fontWeight: 600, textAlign: "right", maxWidth: "65%", wordBreak: "break-word" }}>{String(value)}</span>
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button style={{ flex: 1, fontSize: "0.82rem", background: "#2563EB", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => handleCandidatePdf(viewingCandidate)}><FileDown size={15} /> PDF</button>
+              <button className="btn-blue" style={{ flex: 1, fontSize: "0.82rem", background: "linear-gradient(135deg,#1D4ED8,#3B82F6)" }} onClick={() => { setViewingCandidate(null); openEdit(viewingCandidate); }}>✏️ Modifier</button>
+              {viewingCandidate.status === "PENDING" && (
+                <button style={{ flex: 1, fontSize: "0.82rem", background: "#10B981", color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { approve(viewingCandidate.id); setViewingCandidate(null); }}>✓ Approuver</button>
+              )}
+            </div>
+            {viewingCandidate.status === "PENDING" && (
+              <button style={{ width: "100%", marginTop: 8, fontSize: "0.82rem", background: "#FEF2F2", color: "#EF4444", border: "1.5px solid #FECACA", borderRadius: 12, padding: "11px 0", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }} onClick={() => { reject(viewingCandidate.id); setViewingCandidate(null); }}>✕ Rejeter la candidature</button>
+            )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingCandidate !== null && (
+        <div className="amodal-backdrop" onClick={() => setEditingCandidate(null)}>
+          <div className="amodal" onClick={e => e.stopPropagation()}>
+            <div className="amodal-head">
+              <div>
+                <h3>{isCreating ? "Ajouter un candidat" : "Modifier la candidature"}</h3>
+                {!isCreating && <p className="sub">ID {editingCandidate.id}</p>}
+              </div>
+              <button className="amodal-close" onClick={() => setEditingCandidate(null)}>×</button>
+            </div>
+            <div className="amodal-body">
+
+            <input ref={photoInputRef} type="file" accept="image/*" onChange={e => { const f=e.target.files?.[0]; if(f){setPhotoFile(f);setPhotoPreview(URL.createObjectURL(f));} }} style={{ display: "none" }} />
+            <div onClick={() => photoInputRef.current?.click()} style={{ width: "100%", height: 160, borderRadius: 14, overflow: "hidden", position: "relative", background: photoPreview ? "transparent" : "#F8FAFF", border: photoPreview ? "none" : "2px dashed #CBD5E1", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", marginBottom: 18 }}>
+              {photoPreview ? <Image src={photoPreview} alt="preview" fill style={{ objectFit: "cover" }} /> : <div style={{ textAlign: "center", color: "#94A3B8" }}><Camera size={28} style={{ marginBottom: 6 }} /><div style={{ fontSize: 13 }}>Ajouter une photo</div></div>}
+              {photoPreview && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ color: "#fff", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}><Camera size={16} /> Changer</div></div>}
+            </div>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              <div>
+                <label style={S.lbl}>Nom complet *</label>
+                <input value={editValues.name} onChange={e => setEditValues({...editValues,name:e.target.value})} placeholder="Nom complet" style={S.inp} />
+              </div>
+              <div>
+                <label style={S.lbl}>Email</label>
+                <input type="email" value={editValues.email} onChange={e => setEditValues({...editValues,email:e.target.value})} placeholder="email@exemple.com" style={S.inp} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label style={S.lbl}>Ville *</label>
+                  <input value={editValues.city} onChange={e => setEditValues({...editValues,city:e.target.value})} placeholder="Yaoundé" style={S.inp} />
+                </div>
+                <div>
+                  <label style={S.lbl}>Âge *</label>
+                  <input type="number" value={editValues.age} onChange={e => setEditValues({...editValues,age:e.target.value})} placeholder="22" style={S.inp} />
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label style={S.lbl}>Type</label>
+                  <select value={editValues.type} onChange={e => setEditValues({...editValues,type:e.target.value})} style={S.inp}><option value="MISS">MISS</option><option value="MASTER">MASTER</option></select>
+                </div>
+                <div>
+                  <label style={S.lbl}>Statut</label>
+                  <select value={editValues.status} onChange={e => setEditValues({...editValues,status:e.target.value})} style={S.inp}><option value="PENDING">PENDING</option><option value="APPROVED">APPROVED</option><option value="REJECTED">REJECTED</option></select>
+                </div>
+              </div>
+              <div>
+                <label style={S.lbl}>Téléphone</label>
+                <input value={editValues.phone} onChange={e => setEditValues({...editValues,phone:e.target.value})} placeholder="+237 6XX XXX XXX" style={S.inp} />
+              </div>
+              <div>
+                <label style={S.lbl}>Bio</label>
+                <textarea value={editValues.bio} onChange={e => setEditValues({...editValues,bio:e.target.value})} rows={3} style={{ ...S.inp, resize: "vertical" }} placeholder="Présentation..." />
+              </div>
+              <div style={{ display: "grid", gap: 10 }}>
+                <label style={S.lbl}>📱 Réseaux sociaux</label>
+                {[["instagram","Instagram (@...)"],["tiktok","TikTok (@...)"],["snap","Snapchat"],["whatsappFan","Lien WhatsApp fan"]].map(([k,p]) => (
+                  <input key={k} value={(editValues as any)[k]} onChange={e => setEditValues({...editValues,[k]:e.target.value})} placeholder={p} style={S.inp} />
+                ))}
+              </div>
+
+              {/* ── Ajustement manuel des votes (candidat approuvé, code requis) ── */}
+              {!isCreating && editingCandidate.status === "APPROVED" && (
+                <div style={{ padding: 14, borderRadius: 14, background: "#FFFBEB", border: "1.5px solid #FDE68A", display: "grid", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                    <label style={{ ...S.lbl, marginBottom: 0, color: "#B45309" }}>🗳 Ajuster les votes</label>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#0F172A" }}>
+                      Actuel : {(editingCandidate.totalVotes ?? 0).toLocaleString("fr-FR")}
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <input
+                      type="number" min={1} value={voteQty}
+                      onChange={e => setVoteQty(e.target.value)}
+                      placeholder="Nombre de votes"
+                      style={{ ...S.inp, background: "#fff", borderColor: "#FDE68A" }}
+                    />
+                    <input
+                      type="password" inputMode="numeric" autoComplete="off" value={voteCode}
+                      onChange={e => setVoteCode(e.target.value)}
+                      placeholder="Code de validation *"
+                      style={{ ...S.inp, background: "#fff", borderColor: "#FDE68A" }}
+                    />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <button
+                      onClick={() => adjustVotes(1)}
+                      disabled={voteAdjusting || !voteQty || !voteCode.trim()}
+                      style={{ padding: "11px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: "inherit", background: "#10B981", color: "#fff", opacity: voteAdjusting || !voteQty || !voteCode.trim() ? 0.5 : 1 }}
+                    >
+                      + Ajouter
+                    </button>
+                    <button
+                      onClick={() => adjustVotes(-1)}
+                      disabled={voteAdjusting || !voteQty || !voteCode.trim()}
+                      style={{ padding: "11px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: "inherit", background: "#EF4444", color: "#fff", opacity: voteAdjusting || !voteQty || !voteCode.trim() ? 0.5 : 1 }}
+                    >
+                      − Réduire
+                    </button>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 11.5, color: "#92400E", lineHeight: 1.5 }}>
+                    Le code de validation est obligatoire et vérifié par le serveur. Sans code correct, aucun ajustement n'est possible. Le total ne descend jamais sous 0.
+                  </p>
+                </div>
+              )}
+
+              {/* ── Ajustement manuel des points (candidat approuvé, code requis) ── */}
+              {!isCreating && editingCandidate.status === "APPROVED" && (
+                <div style={{ padding: 14, borderRadius: 14, background: "#F5F3FF", border: "1.5px solid #DDD6FE", display: "grid", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                    <label style={{ ...S.lbl, marginBottom: 0, color: "#6D28D9" }}>🏆 Ajuster les points</label>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#0F172A" }}>
+                      Actuel : {(editingCandidate.points ?? 0).toLocaleString("fr-FR")} pts
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <input
+                      type="number" min={1} value={pointQty}
+                      onChange={e => setPointQty(e.target.value)}
+                      placeholder="Nombre de points"
+                      style={{ ...S.inp, background: "#fff", borderColor: "#DDD6FE" }}
+                    />
+                    <input
+                      type="password" inputMode="numeric" autoComplete="off" value={pointCode}
+                      onChange={e => setPointCode(e.target.value)}
+                      placeholder="Code de validation *"
+                      style={{ ...S.inp, background: "#fff", borderColor: "#DDD6FE" }}
+                    />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <button
+                      onClick={() => adjustPoints(1)}
+                      disabled={pointAdjusting || !pointQty || !pointCode.trim()}
+                      style={{ padding: "11px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: "inherit", background: "#7C3AED", color: "#fff", opacity: pointAdjusting || !pointQty || !pointCode.trim() ? 0.5 : 1 }}
+                    >
+                      + Ajouter
+                    </button>
+                    <button
+                      onClick={() => adjustPoints(-1)}
+                      disabled={pointAdjusting || !pointQty || !pointCode.trim()}
+                      style={{ padding: "11px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: "inherit", background: "#EF4444", color: "#fff", opacity: pointAdjusting || !pointQty || !pointCode.trim() ? 0.5 : 1 }}
+                    >
+                      − Réduire
+                    </button>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 11.5, color: "#5B21B6", lineHeight: 1.5 }}>
+                    Même code de validation que pour les votes, vérifié par le serveur. Le total de points ne descend jamais sous 0. Le classement est mis à jour en direct.
+                  </p>
+                </div>
+              )}
+              <button onClick={saveCandidate} disabled={saving} style={{ marginTop: 4, padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: saving ? 0.6 : 1, fontFamily: "inherit" }}>
+                {saving ? "Enregistrement..." : isCreating ? "✓ Créer le candidat" : "✓ Enregistrer les modifications"}
+              </button>
+            </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingUser && (
+        <div className="amodal-backdrop" onClick={() => setEditingUser(null)}>
+          <div className="amodal" onClick={e => e.stopPropagation()}>
+            <div className="amodal-head">
+              <div>
+                <h3>Modifier l'utilisateur</h3>
+                <p className="sub">{editingUser.email}</p>
+              </div>
+              <button className="amodal-close" onClick={() => setEditingUser(null)}>×</button>
+            </div>
+            <div className="amodal-body">
+            <div style={{ display: "grid", gap: 14 }}>
+              <div><label style={S.lbl}>Nom</label><input value={editUserValues.name} onChange={e => setEditUserValues({...editUserValues,name:e.target.value})} style={S.inp} /></div>
+              <div><label style={S.lbl}>Email</label><input type="email" value={editUserValues.email} onChange={e => setEditUserValues({...editUserValues,email:e.target.value})} style={S.inp} /></div>
+              <div>
+                <label style={S.lbl}>Rôle</label>
+                <select value={editUserValues.role} onChange={e => setEditUserValues({...editUserValues,role:e.target.value})} style={S.inp}><option value="USER">USER</option><option value="ADMIN">ADMIN</option></select>
+              </div>
+              <div style={{ padding: "10px 14px", borderRadius: 10, background: "#F8FAFF", border: "1px solid #E2E8F0", fontSize: 13, color: "#64748B" }}>
+                🗳 Votes effectués : <strong>{editingUser.totalVotes ?? editingUser._count?.votes ?? 0}</strong>
+              </div>
+              <button disabled={editUserSaving} onClick={async () => { setEditUserSaving(true); try { await api.patch(`/admin/users/${editingUser.id}`, editUserValues); toast.success("Mis à jour ✓"); setEditingUser(null); load(); } catch { toast.error("Erreur"); } setEditUserSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: editUserSaving ? 0.6 : 1, fontFamily: "inherit" }}>
+                {editUserSaving ? "Enregistrement..." : "✓ Enregistrer"}
+              </button>
+            </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingContest && (
+        <div className="amodal-backdrop" onClick={() => setEditingContest(null)}>
+          <div className="amodal" onClick={e => e.stopPropagation()}>
+            <div className="amodal-head">
+              <h3>Modifier le concours</h3>
+              <button className="amodal-close" onClick={() => setEditingContest(null)}>×</button>
+            </div>
+            <div className="amodal-body">
+            <div style={{ display: "grid", gap: 14 }}>
+              <div><label style={S.lbl}>Nom du concours</label><input value={editContestValues.name} onChange={e => setEditContestValues({...editContestValues,name:e.target.value})} style={S.inp} /></div>
+              <div><label style={S.lbl}>Date et heure de début</label><input type="datetime-local" value={editContestValues.startDate} onChange={e => setEditContestValues({...editContestValues,startDate:e.target.value})} style={S.inp} /></div>
+              <div>
+                <label style={S.lbl}>Date et heure de fin <span style={{ fontWeight: 400, textTransform: "none" }}>(optionnelle)</span></label>
+                <input type="datetime-local" value={editContestValues.endDate} onChange={e => setEditContestValues({...editContestValues,endDate:e.target.value})} style={S.inp} />
+                {editContestValues.endDate && <button onClick={() => setEditContestValues({...editContestValues,endDate:""})} style={{ marginTop: 4, fontSize: 11, color: "#EF4444", background: "none", border: "none", cursor: "pointer" }}>× Supprimer date fin</button>}
+              </div>
+              <button disabled={editContestSaving} onClick={async () => { setEditContestSaving(true); try { await api.patch(`/admin/contest/${editingContest.id}`, { name: editContestValues.name, startDate: toISO(editContestValues.startDate), endDate: editContestValues.endDate ? toISO(editContestValues.endDate) : null }); toast.success("Mis à jour ✓"); setEditingContest(null); load(); } catch { toast.error("Erreur"); } setEditContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
+                {editContestSaving ? "Enregistrement..." : "✓ Enregistrer"}
+              </button>
+            </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateContest && (
+        <div className="amodal-backdrop" onClick={() => setShowCreateContest(false)}>
+          <div className="amodal" onClick={e => e.stopPropagation()}>
+            <div className="amodal-head">
+              <h3>Nouveau concours</h3>
+              <button className="amodal-close" onClick={() => setShowCreateContest(false)}>×</button>
+            </div>
+            <div className="amodal-body">
+            <div style={{ display: "grid", gap: 14 }}>
+              <div><label style={S.lbl}>Nom *</label><input value={newContest.name} onChange={e => setNewContest({...newContest,name:e.target.value})} placeholder="Ex: Reines du Meta 2026" style={S.inp} /></div>
+              <div><label style={S.lbl}>Date et heure de début *</label><input type="datetime-local" value={newContest.startDate} onChange={e => setNewContest({...newContest,startDate:e.target.value})} style={S.inp} /></div>
+              <div><label style={S.lbl}>Date et heure de fin <span style={{ fontWeight: 400, textTransform: "none" }}>(optionnelle)</span></label><input type="datetime-local" value={newContest.endDate} onChange={e => setNewContest({...newContest,endDate:e.target.value})} style={S.inp} /></div>
+              <div style={{ padding: "12px 14px", borderRadius: 12, background: "#F0FDF4", border: "1px solid #BBF7D0", fontSize: 13, color: "#16A34A" }}>ℹ️ Le concours sera immédiatement ouvert dès la création. Le compte à rebours de l'accueil se base sur la date et l'heure de début.</div>
+              <button disabled={contestSaving||!newContest.name||!newContest.startDate} onClick={async () => { if (!newContest.name||!newContest.startDate) { toast.error("Nom et date requis"); return; } setContestSaving(true); try { await api.post("/admin/contest", { name: newContest.name, startDate: toISO(newContest.startDate), ...(newContest.endDate&&{endDate:toISO(newContest.endDate)}) }); toast.success("Concours créé ✓"); setShowCreateContest(false); setNewContest({name:"",startDate:"",endDate:""}); load(); } catch(err:any) { toast.error(err?.response?.data?.message||"Erreur"); } setContestSaving(false); }} style={{ padding: "14px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, opacity: (!newContest.name||!newContest.startDate)?0.5:1, fontFamily: "inherit" }}>
+                {contestSaving ? "Création..." : "✓ Créer le concours"}
+              </button>
+            </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @media (min-width: 900px) {
+          .admin-desktop-sidebar { display: flex !important; }
+          .admin-mobile-sidebar { display: none !important; }
+          .admin-menu-btn { display: none !important; }
+          .admin-main-content { margin-left: 260px; }
+        }
+        .admin-input { width:100%;padding:12px 14px;border:1.5px solid #E2E8F0;border-radius:12px;font-size:14px;outline:none;font-family:inherit;background:#F8FAFF;color:#0F172A;box-sizing:border-box; }
+        .admin-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        @media (min-width: 560px) { .admin-stats { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
+        @media (min-width: 1100px) { .admin-stats { grid-template-columns: repeat(6, 1fr); } }
+        .admin-stat-c {
+          position: relative; padding: 16px 14px 14px; border-radius: 16px !important;
+          box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .admin-stat-c:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(15,23,42,0.1); }
+        .admin-stat-c .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 12px; }
+        .admin-stat-c .v { font-size: 1.35rem; font-weight: 800; color: #0F172A; line-height: 1.05; word-break: break-word; letter-spacing: -0.02em; }
+        .admin-stat-c .l { margin-top: 5px; font-size: 0.66rem; color: #94A3B8; line-height: 1.3; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .acand-row {
+          display: flex; align-items: stretch; padding: 0 !important; overflow: hidden;
+          box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+          transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+        .acand-row:hover { border-color: #BFDBFE !important; box-shadow: 0 8px 22px rgba(37,99,235,0.1); }
+        .acand-main { display: flex; align-items: center; gap: 13px; flex: 1; min-width: 0; cursor: pointer; padding: 12px 14px; }
+        .acand-photo { width: 60px; height: 68px; border-radius: 13px; overflow: hidden; background: #EFF6FF; position: relative; flex-shrink: 0; border: 1px solid #E2E8F0; }
+        .acand-info { flex: 1; min-width: 0; }
+        .acand-top { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; flex-wrap: wrap; }
+        .acand-rank { background: #0F172A; color: #fff; font-size: 0.68rem; font-weight: 800; padding: 2px 9px; border-radius: 100px; letter-spacing: 0.03em; }
+        .acand-name { font-weight: 800; color: #0F172A; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
+        .acand-sub { font-size: 0.74rem; color: #94A3B8; margin-top: 1px; }
+        .acand-votes { display: flex; align-items: center; gap: 5px; margin-top: 7px; font-size: 0.78rem; font-weight: 800; color: #B45309; }
+        .acand-actions { display: flex; flex-direction: column; border-left: 1px solid #EEF1F6; flex-shrink: 0; }
+        .acand-actions button { flex: 1; width: 50px; border: none; background: #fff; cursor: pointer; display: grid; place-items: center; border-bottom: 1px solid #EEF1F6; transition: background 0.15s; }
+        .acand-actions button:last-child { border-bottom: none; }
+        .acand-actions button:hover { background: #EFF6FF; }
+        .amodal-backdrop {
+          position: fixed; inset: 0; z-index: 300;
+          background: rgba(15,23,42,0.55); backdrop-filter: blur(4px);
+          display: flex; align-items: center; justify-content: center; padding: 16px;
+        }
+        .amodal {
+          width: 100%; max-width: 460px; background: #fff;
+          border-radius: 20px;
+          display: flex; flex-direction: column;
+          max-height: 90vh; max-height: 90dvh; overflow: hidden;
+          animation: modal-pop 0.22s ease;
+          box-shadow: 0 24px 60px rgba(0,0,0,0.28);
+        }
+        @keyframes modal-pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .amodal-head {
+          flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+          gap: 12px; padding: 15px 18px; border-bottom: 1px solid #EEF1F6; background: #fff;
+        }
+        .amodal-head h3 { margin: 0; font-size: 1rem; font-weight: 800; color: #0F172A; }
+        .amodal-head .sub { margin: 2px 0 0; color: #94A3B8; font-size: 0.74rem; word-break: break-all; }
+        .amodal-close {
+          flex-shrink: 0; border: none; background: #F1F5F9; border-radius: 9px;
+          width: 32px; height: 32px; cursor: pointer; font-size: 1.25rem; line-height: 1;
+          display: grid; place-items: center; color: #64748B;
+        }
+        .amodal-close:hover { background: #E2E8F0; }
+        .amodal-body {
+          overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+          padding: 16px 18px 20px; flex: 1; min-height: 0;
+        }
+        @media (min-width: 640px) {
+          .amodal-backdrop { align-items: center; padding: 20px; }
+          .amodal { border-radius: 18px; max-height: 88vh; box-shadow: 0 20px 60px rgba(0,0,0,0.22); }
+        }
+      `}</style>
+    </div>
+  );
+}

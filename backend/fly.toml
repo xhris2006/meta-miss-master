@@ -1,0 +1,8 @@
+app = "backend-wild-hill-4721"
+
+[build]
+  dockerfile = "Dockerfile"
+  image = ""
+
+[env]
+  NODE_ENV = "production"

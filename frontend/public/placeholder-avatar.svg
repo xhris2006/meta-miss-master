@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="533" viewBox="0 0 400 533">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EFF6FF"/>
+      <stop offset="1" stop-color="#DBEAFE"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="533" fill="url(#g)"/>
+  <g fill="#93C5FD">
+    <circle cx="200" cy="210" r="78"/>
+    <path d="M80 470c0-66 54-118 120-118s120 52 120 118v63H80z"/>
+  </g>
+  <text x="200" y="515" text-anchor="middle" font-family="Plus Jakarta Sans, Arial, sans-serif" font-size="22" font-weight="700" fill="#60A5FA">Reines du Meta</text>
+</svg>

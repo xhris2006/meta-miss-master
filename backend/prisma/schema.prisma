@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum CandidateType {
+  MISS
+  MASTER
+}
+
+enum CandidateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ContestStatus {
+  OPEN
+  CLOSED
+  FINISHED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  phone        String?
+  passwordHash String?   // ✅ Optionnel : null pour les comptes Google OAuth
+  avatar       String?
+  role         Role      @default(USER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  votes        Vote[]
+  payments     Payment[]
+  candidates   Candidate[]
+}
+
+model Candidate {
+  id          String          @id @default(cuid())
+  name        String
+  type        CandidateType
+  age         Int
+  city        String
+  bio         String?
+  photoUrl    String
+  status      CandidateStatus @default(PENDING)
+  totalVotes  Int             @default(0)
+  totalLikes  Int             @default(0)
+  points      Int             @default(0)
+  instagram   String?
+  tiktok      String?
+  snap        String?
+  whatsappFan String?
+  phone       String?
+  userId      String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  user        User?           @relation(fields: [userId], references: [id])
+  votes       Vote[]
+  likes       CandidateLike[]
+}
+
+// Un like = un appareil (deviceId) pour un candidat.
+// La contrainte unique (candidateId, deviceId) rend le like idempotent :
+// impossible de compter deux fois le même appareil, même en spammant l'API.
+model CandidateLike {
+  id          String   @id @default(cuid())
+  candidateId String
+  deviceId    String
+  createdAt   DateTime @default(now())
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, deviceId])
+  @@index([candidateId])
+}
+
+// Trace de l'attribution quotidienne des points (chaque soir à 21h Cameroun).
+// `day` = "YYYY-MM-DD" (jour local Cameroun), unique → garantit qu'on n'attribue
+// les points qu'UNE fois par jour, même si le serveur redémarre ou si l'admin
+// déclenche manuellement en plus du cron. `detail` = instantané du classement.
+model PointsAward {
+  id        String   @id @default(cuid())
+  day       String   @unique
+  detail    Json?
+  createdAt DateTime @default(now())
+}
+
+model Vote {
+  id          String   @id @default(cuid())
+  userId      String
+  candidateId String
+  count       Int
+  paymentId   String
+  createdAt   DateTime @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  payment     Payment   @relation(fields: [paymentId], references: [id])
+
+  @@index([candidateId])
+  @@index([userId])
+}
+
+model Payment {
+  id                  String        @id @default(cuid())
+  userId              String
+  amount              Float
+  currency            String        @default("XAF")
+  votesCount          Int
+  status              PaymentStatus @default(PENDING)
+  flutterwaveTxRef    String        @unique
+  flutterwaveFlwRef   String?
+  flutterwaveTransId  String?
+  candidateId         String
+  metadata            Json?
+  webhookReceived     Boolean       @default(false)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  user      User   @relation(fields: [userId], references: [id])
+  votes     Vote[]
+
+  @@index([flutterwaveTxRef])
+  @@index([status])
+}
+
+model Contest {
+  id        String        @id @default(cuid())
+  name      String
+  status    ContestStatus @default(OPEN)
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  level     String
+  message   String
+  meta      Json?
+  createdAt DateTime @default(now())
+}
+
+// Réglages du site (singleton) : liens réseaux sociaux affichés sur la page Support.
+model SiteSetting {
+  id        String   @id @default("site-settings")
+  data      Json?
+  updatedAt DateTime @updatedAt
+}
