@@ -143,6 +143,7 @@ export const translations = {
     autoUpdated: "Mis à jour automatiquement",
     totalVotesTitle: "Total des votes",
     becomeCandidate: "Devenir candidate",
+    presenterLabel: "Présentatrice",
     // Vote modal
     payMobile: "Paiement mobile",
     payIntl: "Carte · International — tous les pays",
@@ -350,6 +351,7 @@ export const translations = {
     autoUpdated: "Updated automatically",
     totalVotesTitle: "Total votes",
     becomeCandidate: "Become a candidate",
+    presenterLabel: "Presenter",
     // Vote modal
     payMobile: "Mobile payment",
     payIntl: "Card · International — all countries",
