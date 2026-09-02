@@ -268,11 +268,11 @@ export default function LandingPage() {
         )}
 
         {presenter && (
-          <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "18px 0", padding: 14, border: "1.5px solid var(--border)", borderRadius: 18, background: "var(--bg-white)", boxShadow: "var(--shadow)" }}>
-            <img src={presenter.photoUrl.startsWith("http") ? presenter.photoUrl : `${apiBase}${presenter.photoUrl}`} alt={presenter.name} style={{ width: 68, height: 82, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 20, margin: "22px 0", padding: "20px 22px", minHeight: 170, border: "1.5px solid var(--border)", borderRadius: 22, background: "var(--bg-white)", boxShadow: "var(--shadow)" }}>
+            <img src={presenter.photoUrl.startsWith("http") ? presenter.photoUrl : `${apiBase}${presenter.photoUrl}`} alt={presenter.name} style={{ width: 128, height: 160, borderRadius: 16, objectFit: "cover", flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: "0.62rem", fontWeight: 800, color: "var(--blue)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Présentatrice</div>
-              <div style={{ fontSize: "1rem", fontWeight: 900, color: "var(--text)" }}>{presenter.name}</div>
+              <div style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--blue)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Présentatrice</div>
+              <div style={{ fontSize: "1.25rem", fontWeight: 900, color: "var(--text)" }}>{presenter.name}</div>
             </div>
           </div>
         )}

@@ -75,12 +75,14 @@ async function getPresenter() {
   return { name, photoUrl };
 }
 
-async function updatePresenter({ name, photoUrl } = {}) {
+async function updatePresenter({ name, photoUrl, deletePhoto = false } = {}) {
   const data = await getRaw();
   const merged = {
     ...data,
     presenterName: typeof name === "string" ? name.trim().slice(0, 120) : (data.presenterName || ""),
-    presenterPhotoUrl: typeof photoUrl === "string" && photoUrl.trim()
+    presenterPhotoUrl: deletePhoto
+      ? ""
+      : typeof photoUrl === "string" && photoUrl.trim()
       ? photoUrl.trim().slice(0, 1000)
       : (data.presenterPhotoUrl || ""),
   };

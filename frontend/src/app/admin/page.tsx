@@ -285,6 +285,22 @@ export default function AdminPage() {
     setPresenterSaving(false);
   };
 
+  const deletePresenterPhoto = async () => {
+    if (!presenterValues.photoUrl || !confirm("Supprimer la photo de la présentatrice ? La section ne sera plus visible sur l'accueil.")) return;
+    setPresenterSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", presenterValues.name);
+      fd.append("deletePhoto", "true");
+      await api.put("/admin/presenter", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setPresenterValues(prev => ({ ...prev, photoUrl: "" }));
+      setPresenterPreview(null);
+      setPresenterFile(null);
+      toast.success("Photo supprimée ✓");
+    } catch { toast.error("Erreur lors de la suppression de la photo"); }
+    setPresenterSaving(false);
+  };
+
   const statusColor: Record<string, string> = { APPROVED: "#10B981", PENDING: "#F59E0B", REJECTED: "#EF4444", COMPLETED: "#10B981", FAILED: "#EF4444", REFUNDED: "#EF4444", OPEN: "#10B981", CLOSED: "#64748B" };
   const sc = (s: string) => statusColor[s] || "#64748B";
 
@@ -826,7 +842,7 @@ export default function AdminPage() {
                 <p style={{ fontSize: 13, color: "#94A3B8", marginBottom: 20 }}>
                   La section apparaîtra sur l'accueil uniquement après l'enregistrement du nom et de la photo.
                 </p>
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 150px", gap: 16, alignItems: "start" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 210px", gap: 20, alignItems: "start" }}>
                   <div style={{ display: "grid", gap: 14 }}>
                     <div>
                       <label style={S.lbl}>Nom de la présentatrice</label>
@@ -839,8 +855,11 @@ export default function AdminPage() {
                     <button onClick={savePresenter} disabled={presenterSaving} style={{ padding: "13px", borderRadius: 14, background: "linear-gradient(135deg,#1D4ED8,#3B82F6)", color: "#fff", border: "none", cursor: presenterSaving ? "wait" : "pointer", fontWeight: 700, fontSize: 14, opacity: presenterSaving ? 0.7 : 1, fontFamily: "inherit" }}>
                       {presenterSaving ? "Enregistrement..." : "✓ Enregistrer la présentatrice"}
                     </button>
+                    {presenterValues.photoUrl && <button onClick={deletePresenterPhoto} disabled={presenterSaving} style={{ padding: "11px 13px", borderRadius: 14, background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", cursor: presenterSaving ? "wait" : "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>
+                      Supprimer la photo
+                    </button>}
                   </div>
-                  <div style={{ aspectRatio: "3 / 4", borderRadius: 14, overflow: "hidden", background: "#F1F5F9", border: "1.5px dashed #CBD5E1", display: "grid", placeItems: "center" }}>
+                  <div style={{ aspectRatio: "3 / 4", minHeight: 250, borderRadius: 16, overflow: "hidden", background: "#F1F5F9", border: "1.5px dashed #CBD5E1", display: "grid", placeItems: "center" }}>
                     {presenterPreview ? <img src={presenterPreview} alt="Aperçu de la présentatrice" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Camera size={28} color="#94A3B8" />}
                   </div>
                 </div>

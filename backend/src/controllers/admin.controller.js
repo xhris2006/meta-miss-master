@@ -283,6 +283,7 @@ class AdminController {
       const data = await settingsService.updatePresenter({
         name: req.body?.name,
         photoUrl,
+        deletePhoto: req.body?.deletePhoto === true || req.body?.deletePhoto === "true",
       });
       res.json({ success: true, message: "Présentatrice mise à jour", data });
     } catch (err) { next(err); }
