@@ -156,7 +156,7 @@ export default function VoteByIdPage() {
     return `${min}:${sec.toString().padStart(2, "0")}`;
   };
 
-  const votes = Math.floor(amount / 50);
+  const votes = Math.floor(amount / 100);
   const effectiveVotes = doubleVotes ? votes * 2 : votes;
   const selectedMethod = METHODS.find((m) => m.id === method) || METHODS[0];
   // Provider reellement utilise (Cameroun & Gabon d'Afrique => agregateur precis, sans frais).
